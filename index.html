@@ -194,6 +194,96 @@
     .copy-btn.copied {
       background: #2e7d32;
     }
+
+    /* Modal styling */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal {
+      background: var(--nhs-white);
+      max-width: 700px;
+      width: 95%;
+      max-height: 80vh;
+      overflow-y: auto;
+      border-radius: 0.5rem;
+      padding: 1rem 1.2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+      color: var(--nhs-grey);
+    }
+
+    .modal-options {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .modal-option {
+      border: 1px solid #ddd;
+      border-radius: 0.4rem;
+      padding: 0.6rem 0.7rem;
+      cursor: pointer;
+      background: #fafafa;
+    }
+
+    .modal-option.selected {
+      border-color: var(--nhs-blue);
+      box-shadow: 0 0 0 1px var(--nhs-blue);
+      background: #f0f6fd;
+    }
+
+    .modal-option-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .modal-option-body {
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+    }
+
+    .modal-footer {
+      margin-top: 0.75rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+
+    .modal-footer button {
+      padding: 0.5rem 0.9rem;
+      font-size: 0.9rem;
+      border-radius: 0.3rem;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-cancel {
+      background: #eee;
+      color: #333;
+    }
+
+    .btn-confirm {
+      background: var(--nhs-blue);
+      color: white;
+    }
+
+    .btn-confirm:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -337,6 +427,23 @@
     </section>
   </main>
 
+  <!-- Modal for choosing taper pathway when direct taper is not possible -->
+  <div id="taperModalOverlay" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Choose taper pathway</h3>
+      <p id="taperModalIntro" style="font-size:0.85rem">
+        This medication cannot be tapered safely using its available UK BNF strengths alone.
+        Please choose which equivalent medication you would like to switch to first in order
+        to taper more gradually. An example taper for each option is shown below.
+      </p>
+      <div id="taperModalOptions" class="modal-options"></div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="taperModalCancel">Cancel</button>
+        <button class="btn-confirm" id="taperModalConfirm" disabled>Confirm choice</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ==========================
     // Antidepressant dataset
@@ -347,19 +454,21 @@
         id: "sertraline",
         name: "Sertraline",
         class: "SSRI",
-        commonDoses: [25, 50, 100, 150, 200],
+        commonDoses: [25, 50, 75, 100, 150, 200],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "fluoxetine",
         name: "Fluoxetine",
         class: "SSRI",
-        commonDoses: [10, 20, 40, 60],
+        commonDoses: [10, 20, 40],
         halfLife: "long",
         withdrawalRisk: "low",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "citalopram",
@@ -368,7 +477,8 @@
         commonDoses: [10, 20, 40],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "escitalopram",
@@ -377,7 +487,8 @@
         commonDoses: [5, 10, 20],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "paroxetine",
@@ -386,7 +497,8 @@
         commonDoses: [10, 20, 30, 40],
         halfLife: "short",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "fluvoxamine",
@@ -395,7 +507,8 @@
         commonDoses: [50, 100, 150, 200],
         halfLife: "short",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
 
       /* SNRIs */
@@ -403,19 +516,22 @@
         id: "venlafaxine_ir",
         name: "Venlafaxine IR (immediate-release / SR)",
         class: "SNRI",
-        commonDoses: [37.5, 75, 150],
+        // 112.5 = 75 + 37.5 (realistic combo)
+        commonDoses: [37.5, 75, 112.5, 150, 225],
         halfLife: "short",
         withdrawalRisk: "very_high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "venlafaxine_mr",
         name: "Venlafaxine MR / XL (modified-release)",
         class: "SNRI",
-        commonDoses: [37.5, 75, 150, 225],
+        commonDoses: [75, 150, 225],
         halfLife: "short",
         withdrawalRisk: "very_high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: true  // taper via switch to IR or SSRI
       },
       {
         id: "duloxetine",
@@ -424,7 +540,8 @@
         commonDoses: [30, 60, 90, 120],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: true  // taper via switch
       },
 
       /* NaSSA / atypical & other */
@@ -435,7 +552,8 @@
         commonDoses: [15, 30, 45],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "vortioxetine",
@@ -444,7 +562,8 @@
         commonDoses: [5, 10, 20],
         halfLife: "long",
         withdrawalRisk: "low",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false  // decent tablet taper: 20→10→5→0
       },
       {
         id: "agomelatine",
@@ -453,16 +572,18 @@
         commonDoses: [25, 50],
         halfLife: "short",
         withdrawalRisk: "low",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false  // usually 50→25→stop
       },
       {
         id: "trazodone",
         name: "Trazodone",
         class: "Atypical",
-        commonDoses: [50, 100, 150, 300, 600],
+        commonDoses: [50, 100, 150, 300],
         halfLife: "short",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "bupropion",
@@ -471,7 +592,8 @@
         commonDoses: [150, 300],
         halfLife: "medium",
         withdrawalRisk: "low",
-        ukLicensed: false
+        ukLicensed: false,
+        requiresSwitchForTaper: true  // usually switch first
       },
 
       /* TCAs and related */
@@ -482,7 +604,8 @@
         commonDoses: [10, 25, 50, 75, 100, 150],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "clomipramine",
@@ -491,7 +614,8 @@
         commonDoses: [10, 25, 50, 75, 100, 150],
         halfLife: "medium",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "dosulepin",
@@ -500,25 +624,28 @@
         commonDoses: [25, 75, 150],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "doxepin",
         name: "Doxepin",
         class: "TCA",
-        commonDoses: [25, 50, 75, 100, 150],
+        commonDoses: [10, 25, 75],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "imipramine",
         name: "Imipramine",
         class: "TCA",
-        commonDoses: [25, 50, 75, 100, 150],
+        commonDoses: [10, 25, 50, 75, 100],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "lofepramine",
@@ -527,7 +654,8 @@
         commonDoses: [70, 140, 210],
         halfLife: "medium",
         withdrawalRisk: "medium",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "maprotiline",
@@ -536,7 +664,8 @@
         commonDoses: [25, 50, 75, 100, 150],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "mianserin",
@@ -545,25 +674,28 @@
         commonDoses: [30, 60, 90],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "nortriptyline",
         name: "Nortriptyline",
         class: "TCA",
-        commonDoses: [10, 25, 50, 75, 100],
+        commonDoses: [10, 25, 50, 75],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "trimipramine",
         name: "Trimipramine",
         class: "TCA",
-        commonDoses: [25, 50, 75, 100, 150],
+        commonDoses: [25, 50, 75, 100],
         halfLife: "long",
         withdrawalRisk: "high",
-        ukLicensed: true
+        ukLicensed: true,
+        requiresSwitchForTaper: false
       },
 
       /* MAOIs – specialist only */
@@ -576,7 +708,8 @@
         withdrawalRisk: "high",
         ukLicensed: true,
         specialistOnly: true,
-        noAutoSwitch: true
+        noAutoSwitch: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "tranylcypromine",
@@ -587,7 +720,8 @@
         withdrawalRisk: "high",
         ukLicensed: true,
         specialistOnly: true,
-        noAutoSwitch: true
+        noAutoSwitch: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "isocarboxazid",
@@ -598,7 +732,8 @@
         withdrawalRisk: "high",
         ukLicensed: true,
         specialistOnly: true,
-        noAutoSwitch: true
+        noAutoSwitch: true,
+        requiresSwitchForTaper: false
       },
       {
         id: "moclobemide",
@@ -609,7 +744,8 @@
         withdrawalRisk: "medium",
         ukLicensed: true,
         specialistOnly: true,
-        noAutoSwitch: false
+        noAutoSwitch: false,
+        requiresSwitchForTaper: false
       }
     ];
 
@@ -620,6 +756,7 @@
       "escitalopram",
       "mirtazapine",
       "venlafaxine_mr",
+      "venlafaxine_ir",
       "duloxetine",
       "amitriptyline",
       "lofepramine",
@@ -685,8 +822,6 @@
     }
 
     function getSwitchStrategy(from, to, currentDose) {
-      const dose = Number(currentDose);
-
       if (from.specialistOnly || to.specialistOnly || from.class === "MAOI" || to.class === "MAOI") {
         return {
           mode: "unsupported",
@@ -815,9 +950,10 @@
           break;
 
         case "cross_taper":
-          const halfDose = Math.max(Math.round((dose * 0.5) * 10) / 10, dose * 0.25);
+          const doses = from.commonDoses.filter(d => d <= dose).sort((a, b) => b - a);
+          const nextLower = doses[1] || Math.max(dose / 2, doses[doses.length - 1] || dose / 2);
           scheduleLines.push(
-            `Week 1–2: Reduce ${from.name} from ${dose} mg to ${halfDose} mg once daily and start ${to.name} at a low dose (e.g. ${to.commonDoses[0]} mg once daily).`,
+            `Week 1–2: Reduce ${from.name} from ${dose} mg to ${nextLower} mg once daily and start ${to.name} at a low dose (e.g. ${to.commonDoses[0]} mg once daily).`,
             `Week 3–4: Stop ${from.name}. Increase ${to.name} towards target dose as tolerated.`
           );
           break;
@@ -887,6 +1023,91 @@
     // ==========================
     // Stopping logic
     // ==========================
+    function generateDiscreteTaperSteps(drug, startDose, durationBand) {
+      // Determine base number of steps from duration
+      let baseSteps;
+      switch (durationBand) {
+        case "short": baseSteps = 2; break;
+        case "medium": baseSteps = 3; break;
+        case "long": baseSteps = 4; break;
+        case "very_long": baseSteps = 5; break;
+        default: baseSteps = 3;
+      }
+
+      // Adjust by withdrawal risk
+      let steps = baseSteps;
+      if (drug.withdrawalRisk === "very_high") steps += 2;
+      else if (drug.withdrawalRisk === "high") steps += 1;
+      if (drug.halfLife === "long") steps = Math.max(2, steps - 1);
+      steps = Math.min(8, Math.max(2, steps));
+
+      // Weeks per step
+      let weeksPerStep = 2;
+      if (durationBand === "short") weeksPerStep = 1;
+      if (durationBand === "very_long") weeksPerStep = 3;
+      if (drug.withdrawalRisk === "very_high" || drug.withdrawalRisk === "high") {
+        weeksPerStep = Math.max(2, weeksPerStep);
+      }
+
+      // Allowed discrete doses at or below start dose
+      const allowed = drug.commonDoses
+        .filter(d => d <= startDose)
+        .sort((a, b) => b - a); // descending
+
+      // Ensure startDose is included
+      if (!allowed.includes(startDose)) {
+        allowed.unshift(startDose);
+      }
+
+      const doseSequence = [];
+      let current = startDose;
+      doseSequence.push(current);
+
+      // Step down through allowed list
+      for (let i = 0; i < allowed.length; i++) {
+        const d = allowed[i];
+        if (d === current) {
+          const next = allowed[i + 1];
+          if (next !== undefined) {
+            doseSequence.push(next);
+            current = next;
+          }
+        }
+      }
+
+      // Slice to max (steps-1) dose steps; last step will be stop
+      const maxDoseSteps = steps - 1;
+      const truncatedDoses = doseSequence.slice(0, maxDoseSteps);
+
+      // Build schedule
+      const schedule = [];
+      truncatedDoses.forEach((d, index) => {
+        const isLastDose = index === truncatedDoses.length - 1;
+        const stepIndex = index + 1;
+        const startWeek = (stepIndex - 1) * weeksPerStep + 1;
+        const endWeek = stepIndex * weeksPerStep;
+        schedule.push({
+          step: stepIndex,
+          dose: d,
+          startWeek,
+          endWeek
+        });
+      });
+
+      // Add final stop step
+      const finalStepIndex = truncatedDoses.length + 1;
+      const finalStartWeek = (finalStepIndex - 1) * weeksPerStep + 1;
+      const finalEndWeek = finalStepIndex * weeksPerStep;
+      schedule.push({
+        step: finalStepIndex,
+        dose: 0,
+        startWeek: finalStartWeek,
+        endWeek: finalEndWeek
+      });
+
+      return { schedule, weeksPerStep };
+    }
+
     function generateStopPlan(drugId, dose, durationBand) {
       const drug = getDrugById(drugId);
       const startDose = Number(dose);
@@ -894,77 +1115,14 @@
         return { clinician: "Please select a drug and dose.", sms: "" };
       }
 
-      let baseSteps;
-      let baseWeeksPerStep;
-      switch (durationBand) {
-        case "short":
-          baseSteps = 2;
-          baseWeeksPerStep = 1;
-          break;
-        case "medium":
-          baseSteps = 3;
-          baseWeeksPerStep = 2;
-          break;
-        case "long":
-          baseSteps = 4;
-          baseWeeksPerStep = 2;
-          break;
-        case "very_long":
-          baseSteps = 6;
-          baseWeeksPerStep = 3;
-          break;
-        default:
-          baseSteps = 3;
-          baseWeeksPerStep = 2;
-      }
+      // Discrete taper steps
+      const { schedule } = generateDiscreteTaperSteps(drug, startDose, durationBand);
 
-      let steps = baseSteps;
-      if (drug.withdrawalRisk === "very_high") steps += 2;
-      else if (drug.withdrawalRisk === "high") steps += 1;
-
-      if (drug.halfLife === "long") {
-        steps = Math.max(2, steps - 1);
-      }
-
-      steps = Math.min(8, Math.max(2, steps));
-
-      let weeksPerStep = baseWeeksPerStep;
-      if (drug.withdrawalRisk === "very_high" || drug.withdrawalRisk === "high") {
-        weeksPerStep = Math.max(2, weeksPerStep);
-      }
-
-      const schedule = [];
-      let current = startDose;
-
-      for (let i = 1; i <= steps; i++) {
-        const isLast = i === steps;
-        if (isLast) {
-          schedule.push({ step: i, dose: 0 });
-        } else {
-          let factor = 0.5;
-          if (i > 2) factor = 0.7;
-
-          current = current * factor;
-
-          const minProportion = 0.2;
-          if (current < startDose * minProportion && !isLast) {
-            current = startDose * minProportion;
-          }
-
-          const rounding = current >= 10 ? 5 : 1;
-          current = Math.max(rounding, Math.round(current / rounding) * rounding);
-
-          schedule.push({ step: i, dose: current });
-        }
-      }
-
-      const lines = schedule.map((s, index) => {
-        const startWeek = index * weeksPerStep + 1;
-        const endWeek = (index + 1) * weeksPerStep;
+      const lines = schedule.map(s => {
         if (s.dose === 0) {
-          return `Weeks ${startWeek}–${endWeek}: stop ${drug.name} if stable and withdrawal symptoms are manageable.`;
+          return `Weeks ${s.startWeek}–${s.endWeek}: stop ${drug.name} if stable and withdrawal symptoms are manageable.`;
         } else {
-          return `Weeks ${startWeek}–${endWeek}: ${drug.name} ${s.dose} mg once daily.`;
+          return `Weeks ${s.startWeek}–${s.endWeek}: ${drug.name} ${s.dose} mg once daily.`;
         }
       });
 
@@ -980,8 +1138,8 @@
         `Plan – gradual reduction of ${drug.name} ${startDose} mg OD (duration: ${durationText})\n\n` +
         lines.map(l => `• ${l}`).join("\n") +
         `\n\nRationale & counselling:\n` +
-        `• Uses proportional dose reductions over several weeks/months, in line with NICE NG222 / QS8 and RCPsych guidance.\n` +
-        `• Slower taper chosen for higher withdrawal risk drugs (e.g. paroxetine, venlafaxine).\n` +
+        `• Uses discrete tablet/capsule strengths in line with UK BNF (no unachievable doses).\n` +
+        `• Number and spacing of steps adjusted for withdrawal risk and duration of treatment.\n` +
         `• Advised patient about withdrawal symptoms (dizziness, "electric shocks", flu-like symptoms, sleep disturbance, anxiety, low mood) and difference from relapse.\n` +
         `• Advised to contact the surgery if withdrawal is severe/persistent or if depressive symptoms return; consider pausing or slowing taper.\n` +
         `• Documented crisis/safety netting (self-harm, suicidal ideation) and agreed review plan.\n`;
@@ -994,6 +1152,161 @@
         `contact the surgery, NHS 111 or 999/A&amp;E urgently.`;
 
       return { clinician: clinicianText, sms: smsText };
+    }
+
+    // ==========================
+    // Taper pathway chooser (modal) for non-taperable drugs
+    // ==========================
+    let pendingTaperContext = null; // {sourceDrugId, sourceDose, durationBand}
+    let pendingTaperOptions = [];
+    let selectedTaperOptionId = null;
+
+    function getTaperOptionsForDrug(drug, startDose, durationBand) {
+      const options = [];
+
+      if (drug.id === "venlafaxine_mr") {
+        // Option 1: switch to equivalent venlafaxine IR
+        options.push({
+          id: "opt_venla_ir",
+          label: "Switch to venlafaxine IR then taper",
+          description: "",
+          taperDrugId: "venlafaxine_ir",
+          taperStartDose: startDose
+        });
+        // Option 2: switch to sertraline
+        options.push({
+          id: "opt_sertraline",
+          label: "Switch to sertraline then taper",
+          description: "",
+          taperDrugId: "sertraline",
+          taperStartDose: startDose <= 75 ? 50 : 100
+        });
+      } else if (drug.id === "duloxetine") {
+        options.push({
+          id: "opt_sertraline",
+          label: "Switch to sertraline then taper",
+          description: "",
+          taperDrugId: "sertraline",
+          taperStartDose: startDose <= 30 ? 50 : 50
+        });
+        options.push({
+          id: "opt_venla_ir",
+          label: "Switch to venlafaxine IR then taper",
+          description: "",
+          taperDrugId: "venlafaxine_ir",
+          taperStartDose: startDose <= 30 ? 37.5 : 75
+        });
+      } else if (drug.id === "bupropion") {
+        options.push({
+          id: "opt_sertraline",
+          label: "Switch to sertraline then taper",
+          description: "",
+          taperDrugId: "sertraline",
+          taperStartDose: startDose <= 150 ? 50 : 100
+        });
+        options.push({
+          id: "opt_fluoxetine",
+          label: "Switch to fluoxetine then taper",
+          description: "",
+          taperDrugId: "fluoxetine",
+          taperStartDose: 20
+        });
+      } else {
+        // Generic fallback
+        options.push({
+          id: "opt_sertraline",
+          label: "Switch to sertraline then taper",
+          description: "",
+          taperDrugId: "sertraline",
+          taperStartDose: 50
+        });
+      }
+
+      // Attach example tapers using existing generateStopPlan
+      options.forEach(opt => {
+        const examplePlan = generateStopPlan(opt.taperDrugId, opt.taperStartDose, durationBand);
+        const lines = examplePlan.clinician.split("\n").filter(l => l.trim().startsWith("• Weeks"));
+        opt.description = `Example taper for ${getDrugById(opt.taperDrugId).name} ${opt.taperStartDose} mg OD:\n` +
+          (lines.length ? lines.join("\n") : "(see detailed plan after confirmation)");
+      });
+
+      return options;
+    }
+
+    function openTaperModal(context) {
+      pendingTaperContext = context;
+      selectedTaperOptionId = null;
+      const overlay = document.getElementById("taperModalOverlay");
+      const optionsContainer = document.getElementById("taperModalOptions");
+      const confirmBtn = document.getElementById("taperModalConfirm");
+
+      const sourceDrug = getDrugById(context.sourceDrugId);
+      document.getElementById("taperModalIntro").textContent =
+        `This medication (${sourceDrug.name} ${context.sourceDose} mg) cannot be tapered safely using its available UK BNF strengths alone. ` +
+        `Choose an intermediate medication to switch to first, then taper that medicine. An example taper is shown for each option.`;
+
+      pendingTaperOptions = getTaperOptionsForDrug(
+        sourceDrug,
+        Number(context.sourceDose),
+        context.durationBand
+      );
+
+      optionsContainer.innerHTML = "";
+      pendingTaperOptions.forEach(opt => {
+        const div = document.createElement("div");
+        div.className = "modal-option";
+        div.dataset.optionId = opt.id;
+
+        const title = document.createElement("div");
+        title.className = "modal-option-title";
+        title.textContent = opt.label;
+
+        const body = document.createElement("div");
+        body.className = "modal-option-body";
+        body.textContent = opt.description;
+
+        div.appendChild(title);
+        div.appendChild(body);
+        optionsContainer.appendChild(div);
+      });
+
+      confirmBtn.disabled = true;
+      overlay.classList.remove("hidden");
+    }
+
+    function closeTaperModal() {
+      const overlay = document.getElementById("taperModalOverlay");
+      overlay.classList.add("hidden");
+      pendingTaperContext = null;
+      pendingTaperOptions = [];
+      selectedTaperOptionId = null;
+    }
+
+    function confirmTaperModalChoice() {
+      if (!pendingTaperContext || !selectedTaperOptionId) return;
+      const option = pendingTaperOptions.find(o => o.id === selectedTaperOptionId);
+      if (!option) return;
+
+      const sourceDrug = getDrugById(pendingTaperContext.sourceDrugId);
+      const taperDrug = getDrugById(option.taperDrugId);
+      const taperPlan = generateStopPlan(option.taperDrugId, option.taperStartDose, pendingTaperContext.durationBand);
+
+      const clinicianText =
+        `Step 1 – switch for tapering\n` +
+        `• Switch from ${sourceDrug.name} ${pendingTaperContext.sourceDose} mg OD to ${taperDrug.name} ${option.taperStartDose} mg OD as an intermediate antidepressant to facilitate a more gradual taper (see NICE/SPS).\n\n` +
+        `Step 2 – taper ${taperDrug.name}\n\n` +
+        taperPlan.clinician;
+
+      const smsText =
+        `Plan to reduce your medication\n\n` +
+        `First we will change you from ${sourceDrug.name} to ${taperDrug.name} ${option.taperStartDose} mg daily. ` +
+        `Once you are settled on this, we will gradually reduce ${taperDrug.name}:\n\n` +
+        taperPlan.sms;
+
+      document.getElementById("stopClinician").textContent = clinicianText;
+      document.getElementById("stopSMS").textContent = smsText;
+
+      closeTaperModal();
     }
 
     // ==========================
@@ -1038,6 +1351,14 @@
           btn.classList.remove("copied");
         }, 1500);
       }
+
+      if (e.target.classList.contains("modal-option")) {
+        const options = document.querySelectorAll(".modal-option");
+        options.forEach(o => o.classList.remove("selected"));
+        e.target.classList.add("selected");
+        selectedTaperOptionId = e.target.dataset.optionId;
+        document.getElementById("taperModalConfirm").disabled = false;
+      }
     });
 
     // ==========================
@@ -1079,7 +1400,27 @@
       });
 
       document.getElementById("generateStop").addEventListener("click", () => {
-        const res = generateStopPlan(stopDrugSelect.value, stopDoseSelect.value, durationSelect.value);
+        const drugId = stopDrugSelect.value;
+        const dose = stopDoseSelect.value;
+        const durationBand = durationSelect.value;
+        const drug = getDrugById(drugId);
+
+        if (!drug || !dose) {
+          document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
+          document.getElementById("stopSMS").textContent = "";
+          return;
+        }
+
+        if (drug.requiresSwitchForTaper) {
+          openTaperModal({
+            sourceDrugId: drugId,
+            sourceDose: dose,
+            durationBand
+          });
+          return;
+        }
+
+        const res = generateStopPlan(drugId, dose, durationBand);
         document.getElementById("stopClinician").textContent = res.clinician;
         document.getElementById("stopSMS").textContent = res.sms;
       });
@@ -1089,6 +1430,16 @@
         document.getElementById("stopSMS").textContent = "";
       });
 
+      // Modal buttons
+      document.getElementById("taperModalCancel").addEventListener("click", () => {
+        closeTaperModal();
+      });
+
+      document.getElementById("taperModalConfirm").addEventListener("click", () => {
+        confirmTaperModalChoice();
+      });
+
+      // Tab switching
       const tabButtons = document.querySelectorAll(".tab-button");
       const tabs = {
         switching: document.getElementById("switching"),
