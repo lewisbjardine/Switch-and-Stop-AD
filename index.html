@@ -447,7 +447,7 @@
   </footer>
 
   <!-- Modal for choosing taper pathway when direct taper is not possible -->
-  <div id="taperModalOverlay" class="modal-overlay hidden">
+  <div id="taperModalOverlay" class="modal-overlay hidden" style="display:none;">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="taperModalTitle">
       <h3 id="taperModalTitle">Choose taper pathway</h3>
       <p id="taperModalIntro" style="font-size:0.85rem">
@@ -465,6 +465,15 @@
 
   <script>
     // ==========================
+    // Global state
+    // ==========================
+    let userHasClickedGenerateStop = false;
+    let pendingTaperContext = null; // {sourceDrugId, sourceDose, durationBand}
+    let pendingTaperOptions = [];
+    let selectedTaperOptionId = null;
+    let lastFocusedElementBeforeModal = null;
+
+    // ==========================
     // Antidepressant dataset
     // ==========================
     const antidepressants = [
@@ -473,7 +482,6 @@
         id: "sertraline",
         name: "Sertraline",
         class: "SSRI",
-        // include 75 as realistic combo (50+25)
         commonDoses: [25, 50, 75, 100, 150, 200],
         halfLife: "medium",
         withdrawalRisk: "medium",
@@ -972,7 +980,6 @@
           break;
 
         case "cross_taper":
-          // simple discrete down-step using actual doses
           const doses = from.commonDoses.filter(d => d <= dose).sort((a, b) => b - a);
           const nextLower = doses[1] || Math.max(dose / 2, doses[doses.length - 1] || dose / 2);
           scheduleLines.push(
@@ -1007,7 +1014,7 @@
       const standardCautions = [
         "Warned about possible transient increase in anxiety, GI upset, sleep disturbance and withdrawal symptoms during the switch.",
         "Advised on risk of serotonin syndrome, particularly when drugs overlap.",
-        "Advised to seek urgent help (111/999/A&amp;E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
+        "Advised to seek urgent help (111/999/A&E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
         "Plan for review within 2–4 weeks, sooner if high risk."
       ];
 
@@ -1037,7 +1044,7 @@
       }
 
       smsText +=
-        `Contact the surgery, NHS 111 or 999/A&amp;E urgently if you feel very agitated, confused, feverish, ` +
+        `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, ` +
         `have severe diarrhoea, or have thoughts of harming yourself.`;
 
       return { clinician: clinicianText, sms: smsText };
@@ -1161,19 +1168,14 @@
         `You are on ${drug.name} ${startDose} mg daily. We will reduce this gradually:\n` +
         lines.map(l => "- " + l.replace(`${drug.name} `, "")).join("\n") +
         `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, ` +
-        `contact the surgery, NHS 111 or 999/A&amp;E urgently.`;
+        `contact the surgery, NHS 111 or 999/A&E urgently.`;
 
       return { clinician: clinicianText, sms: smsText };
     }
 
     // ==========================
-    // Taper pathway chooser (modal) for non-taperable drugs
+    // Taper pathway chooser (modal)
     // ==========================
-    let pendingTaperContext = null; // {sourceDrugId, sourceDose, durationBand}
-    let pendingTaperOptions = [];
-    let selectedTaperOptionId = null;
-    let lastFocusedElementBeforeModal = null;
-
     function getTaperOptionsForDrug(drug, startDose, durationBand) {
       const options = [];
 
@@ -1238,6 +1240,7 @@
     function openTaperModal(context) {
       pendingTaperContext = context;
       selectedTaperOptionId = null;
+
       const overlay = document.getElementById("taperModalOverlay");
       const optionsContainer = document.getElementById("taperModalOptions");
       const confirmBtn = document.getElementById("taperModalConfirm");
@@ -1273,7 +1276,9 @@
       });
 
       confirmBtn.disabled = true;
+
       overlay.classList.remove("hidden");
+      overlay.style.display = "flex";
 
       lastFocusedElementBeforeModal = document.activeElement;
       confirmBtn.focus();
@@ -1282,6 +1287,8 @@
     function closeTaperModal() {
       const overlay = document.getElementById("taperModalOverlay");
       overlay.classList.add("hidden");
+      overlay.style.display = "none";
+
       pendingTaperContext = null;
       pendingTaperOptions = [];
       selectedTaperOptionId = null;
@@ -1410,16 +1417,15 @@
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const overlay = document.getElementById("taperModalOverlay");
-        if (!overlay.classList.contains("hidden")) {
+        if (overlay && !overlay.classList.contains("hidden")) {
           closeTaperModal();
         }
       }
     });
 
     // ==========================
-    // UI wiring
+    // Main UI wiring
     // ==========================
-    let userHasClickedGenerateStop = false;
     document.addEventListener("DOMContentLoaded", () => {
       const fromDrugSelect = document.getElementById("fromDrug");
       const fromDoseSelect = document.getElementById("fromDose");
@@ -1434,6 +1440,14 @@
         switching: document.getElementById("switching"),
         stopping: document.getElementById("stopping")
       };
+
+      const overlay = document.getElementById("taperModalOverlay");
+      if (overlay) {
+        overlay.classList.add("hidden");
+        overlay.style.display = "none";
+      }
+
+      userHasClickedGenerateStop = false;
 
       const state = loadState();
 
@@ -1509,33 +1523,33 @@
       });
 
       // Generate stop
-document.getElementById("generateStop").addEventListener("click", () => {
-    userHasClickedGenerateStop = true; // ← NEW
+      document.getElementById("generateStop").addEventListener("click", () => {
+        userHasClickedGenerateStop = true;
 
-    const drugId = stopDrugSelect.value;
-    const dose = stopDoseSelect.value;
-    const durationBand = durationSelect.value;
-    const drug = getDrugById(drugId);
+        const drugId = stopDrugSelect.value;
+        const dose = stopDoseSelect.value;
+        const durationBand = durationSelect.value;
+        const drug = getDrugById(drugId);
 
-    if (!drug || !dose) {
-        document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
-        document.getElementById("stopSMS").textContent = "";
-        return;
-    }
+        if (!drug || !dose) {
+          document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
+          document.getElementById("stopSMS").textContent = "";
+          return;
+        }
 
-    if (drug.requiresSwitchForTaper && userHasClickedGenerateStop) { // ← MODIFIED
-        openTaperModal({
+        if (drug.requiresSwitchForTaper && userHasClickedGenerateStop) {
+          openTaperModal({
             sourceDrugId: drugId,
             sourceDose: dose,
             durationBand
-        });
-        return;
-    }
+          });
+          return;
+        }
 
-    const res = generateStopPlan(drugId, dose, durationBand);
-    document.getElementById("stopClinician").textContent = res.clinician;
-    document.getElementById("stopSMS").textContent = res.sms;
-});
+        const res = generateStopPlan(drugId, dose, durationBand);
+        document.getElementById("stopClinician").textContent = res.clinician;
+        document.getElementById("stopSMS").textContent = res.sms;
+      });
 
       document.getElementById("clearStop").addEventListener("click", () => {
         document.getElementById("stopClinician").textContent = "";
@@ -1573,6 +1587,3 @@ document.getElementById("generateStop").addEventListener("click", () => {
   </script>
 </body>
 </html>
-
-
-
