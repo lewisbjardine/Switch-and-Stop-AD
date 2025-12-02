@@ -2,10 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Switch & Stop AD</title>
+  <title>Switch &amp; Stop AD</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Simple NHS-like styling -->
   <style>
     :root {
       --nhs-blue: #005eb8;
@@ -151,6 +150,7 @@
       white-space: pre-wrap;
       word-wrap: break-word;
       min-height: 180px;
+      clear: both;
     }
 
     .output-label {
@@ -178,6 +178,22 @@
     .hidden {
       display: none;
     }
+
+    .copy-btn {
+      float: right;
+      margin-bottom: 4px;
+      background: var(--nhs-blue);
+      color: white;
+      border: none;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .copy-btn.copied {
+      background: #2e7d32;
+    }
   </style>
 </head>
 <body>
@@ -197,7 +213,8 @@
       <h2>Switch between antidepressants</h2>
       <p style="font-size:0.9rem">
         Choose the current and new antidepressant. This tool generates a draft plan based on high-level
-        principles from NICE NG222 and SPS switching strategies – always check full guidance for complex cases.
+        principles from NICE NG222 and SPS switching strategies. Always check full SPS / local guidance
+        and use clinical judgement.
       </p>
 
       <div class="grid">
@@ -223,23 +240,28 @@
       <div class="outputs" style="margin-top:1rem">
         <div>
           <div class="output-label">Clinician note (SystmOne/EMIS)</div>
+          <button class="copy-btn" data-target="switchClinician">Copy</button>
           <div id="switchClinician" class="output-box"></div>
         </div>
         <div>
           <div class="output-label">Patient SMS version</div>
+          <button class="copy-btn" data-target="switchSMS">Copy</button>
           <div id="switchSMS" class="output-box"></div>
         </div>
       </div>
 
       <p class="disclaimer">
-        Sources (accessed 2025): NICE NG222 Depression in adults – stopping and switching antidepressants,
-        NICE CKS Depression – switching antidepressants, SPS “Switching strategies for antidepressants” and
-        related SSRI/SNRI/TCA switching articles.
+        Sources (accessed 2025): NICE NG222 Depression in adults – starting and stopping antidepressants;
+        NICE CKS Depression – switching antidepressants; SPS suite “Switching strategies for antidepressants”
+        (including SSRIs to other antidepressants, SNRIs to other antidepressants, TCAs to other antidepressants,
+        MAOI switching articles).
       </p>
       <p class="disclaimer">
-        Links: 
+        Links:
         <a class="guideline-link" href="https://www.nice.org.uk/guidance/ng222" target="_blank">NICE NG222</a> ·
         <a class="guideline-link" href="https://www.sps.nhs.uk/articles/switching-strategies-for-antidepressants/" target="_blank">SPS switching strategies</a> ·
+        <a class="guideline-link" href="https://www.sps.nhs.uk/articles/ssris-to-other-antidepressants-switching-in-adults/" target="_blank">SPS SSRIs to other antidepressants</a> ·
+        <a class="guideline-link" href="https://www.sps.nhs.uk/articles/snris-to-other-antidepressants-switching-in-adults/" target="_blank">SPS SNRIs to other antidepressants</a> ·
         <a class="guideline-link" href="https://www.psychiatrienet.nl/switchtabel/show?id=SwitchAntidepressants" target="_blank">Psychiatrienet switch table</a>
       </p>
     </section>
@@ -248,8 +270,8 @@
     <section id="stopping" class="tab card hidden">
       <h2>Plan antidepressant cessation</h2>
       <p style="font-size:0.9rem">
-        Generates a simple tapering schedule based on duration of treatment and basic pharmacokinetic
-        considerations. Adapt to individual response and use your local/Trust guidance.
+        Generates a proportional taper based on duration of use and withdrawal risk (slower for high-risk drugs
+        such as paroxetine and venlafaxine). Adapt to individual response and local guidance.
       </p>
 
       <div class="grid">
@@ -280,17 +302,20 @@
       <div class="outputs" style="margin-top:1rem">
         <div>
           <div class="output-label">Clinician note (SystmOne/EMIS)</div>
+          <button class="copy-btn" data-target="stopClinician">Copy</button>
           <div id="stopClinician" class="output-box"></div>
         </div>
         <div>
           <div class="output-label">Patient SMS version</div>
+          <button class="copy-btn" data-target="stopSMS">Copy</button>
           <div id="stopSMS" class="output-box"></div>
         </div>
       </div>
 
       <p class="disclaimer">
-        Sources (accessed 2025): NICE NG222 &amp; QS8 “Stopping antidepressants”, RCPsych “Stopping antidepressants”
-        information resource, SPS “Deprescribing of antidepressants for depression and anxiety”.
+        Sources (accessed 2025): NICE NG222 &amp; QS8 “Stopping antidepressants”; RCPsych “Stopping antidepressants”
+        information resource; SPS “Deprescribing of antidepressants for depression and anxiety”; BJGP and BMJ articles
+        advocating proportional, slower tapers especially for shorter half-life / high withdrawal risk agents.
       </p>
       <p class="disclaimer">
         Links:
@@ -306,24 +331,26 @@
       <p style="font-size:0.9rem">
         This tool is intended for use by healthcare professionals in UK primary care as an
         <strong>aide-mémoire</strong>. It does not replace full clinical assessment, shared decision-making,
-        or local / national guidelines. Use with caution in pregnancy, bipolar disorder, recent self-harm,
-        significant comorbidity or polypharmacy – consider specialist advice.
+        or local / national guidelines. Use with particular caution in pregnancy, bipolar disorder,
+        recent self-harm, significant comorbidity or polypharmacy – consider specialist advice.
       </p>
     </section>
   </main>
 
   <script>
-    // -------------------------
-    // Antidepressant data
-    // -------------------------
+    // ==========================
+    // Antidepressant dataset
+    // ==========================
     const antidepressants = [
+      /* SSRIs */
       {
         id: "sertraline",
         name: "Sertraline",
         class: "SSRI",
         commonDoses: [25, 50, 100, 150, 200],
         halfLife: "medium",
-        withdrawalRisk: "medium"
+        withdrawalRisk: "medium",
+        ukLicensed: true
       },
       {
         id: "fluoxetine",
@@ -331,7 +358,8 @@
         class: "SSRI",
         commonDoses: [10, 20, 40, 60],
         halfLife: "long",
-        withdrawalRisk: "low"
+        withdrawalRisk: "low",
+        ukLicensed: true
       },
       {
         id: "citalopram",
@@ -339,7 +367,8 @@
         class: "SSRI",
         commonDoses: [10, 20, 40],
         halfLife: "medium",
-        withdrawalRisk: "medium"
+        withdrawalRisk: "medium",
+        ukLicensed: true
       },
       {
         id: "escitalopram",
@@ -347,7 +376,8 @@
         class: "SSRI",
         commonDoses: [5, 10, 20],
         halfLife: "medium",
-        withdrawalRisk: "medium"
+        withdrawalRisk: "medium",
+        ukLicensed: true
       },
       {
         id: "paroxetine",
@@ -355,23 +385,37 @@
         class: "SSRI",
         commonDoses: [10, 20, 30, 40],
         halfLife: "short",
-        withdrawalRisk: "high"
+        withdrawalRisk: "high",
+        ukLicensed: true
       },
       {
-        id: "mirtazapine",
-        name: "Mirtazapine",
-        class: "NaSSA",
-        commonDoses: [15, 30, 45],
-        halfLife: "medium",
-        withdrawalRisk: "medium"
+        id: "fluvoxamine",
+        name: "Fluvoxamine",
+        class: "SSRI",
+        commonDoses: [50, 100, 150, 200],
+        halfLife: "short",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+
+      /* SNRIs */
+      {
+        id: "venlafaxine_ir",
+        name: "Venlafaxine IR (immediate-release / SR)",
+        class: "SNRI",
+        commonDoses: [37.5, 75, 150],
+        halfLife: "short",
+        withdrawalRisk: "very_high",
+        ukLicensed: true
       },
       {
-        id: "venlafaxine",
-        name: "Venlafaxine MR",
+        id: "venlafaxine_mr",
+        name: "Venlafaxine MR / XL (modified-release)",
         class: "SNRI",
         commonDoses: [37.5, 75, 150, 225],
         halfLife: "short",
-        withdrawalRisk: "high"
+        withdrawalRisk: "very_high",
+        ukLicensed: true
       },
       {
         id: "duloxetine",
@@ -379,17 +423,224 @@
         class: "SNRI",
         commonDoses: [30, 60, 90, 120],
         halfLife: "medium",
-        withdrawalRisk: "medium"
+        withdrawalRisk: "medium",
+        ukLicensed: true
+      },
+
+      /* NaSSA / atypical & other */
+      {
+        id: "mirtazapine",
+        name: "Mirtazapine",
+        class: "NaSSA",
+        commonDoses: [15, 30, 45],
+        halfLife: "medium",
+        withdrawalRisk: "medium",
+        ukLicensed: true
+      },
+      {
+        id: "vortioxetine",
+        name: "Vortioxetine",
+        class: "Atypical",
+        commonDoses: [5, 10, 20],
+        halfLife: "long",
+        withdrawalRisk: "low",
+        ukLicensed: true
+      },
+      {
+        id: "agomelatine",
+        name: "Agomelatine",
+        class: "Atypical",
+        commonDoses: [25, 50],
+        halfLife: "short",
+        withdrawalRisk: "low",
+        ukLicensed: true
+      },
+      {
+        id: "trazodone",
+        name: "Trazodone",
+        class: "Atypical",
+        commonDoses: [50, 100, 150, 300, 600],
+        halfLife: "short",
+        withdrawalRisk: "medium",
+        ukLicensed: true
+      },
+      {
+        id: "bupropion",
+        name: "Bupropion (Zyban – not licensed for depression in UK)",
+        class: "NDRI",
+        commonDoses: [150, 300],
+        halfLife: "medium",
+        withdrawalRisk: "low",
+        ukLicensed: false
+      },
+
+      /* TCAs and related */
+      {
+        id: "amitriptyline",
+        name: "Amitriptyline",
+        class: "TCA",
+        commonDoses: [10, 25, 50, 75, 100, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "clomipramine",
+        name: "Clomipramine",
+        class: "TCA",
+        commonDoses: [10, 25, 50, 75, 100, 150],
+        halfLife: "medium",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "dosulepin",
+        name: "Dosulepin (dothiepin – not recommended for new starts)",
+        class: "TCA",
+        commonDoses: [25, 75, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "doxepin",
+        name: "Doxepin",
+        class: "TCA",
+        commonDoses: [25, 50, 75, 100, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "imipramine",
+        name: "Imipramine",
+        class: "TCA",
+        commonDoses: [25, 50, 75, 100, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "lofepramine",
+        name: "Lofepramine",
+        class: "TCA",
+        commonDoses: [70, 140, 210],
+        halfLife: "medium",
+        withdrawalRisk: "medium",
+        ukLicensed: true
+      },
+      {
+        id: "maprotiline",
+        name: "Maprotiline",
+        class: "TCA",
+        commonDoses: [25, 50, 75, 100, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "mianserin",
+        name: "Mianserin",
+        class: "TCA",
+        commonDoses: [30, 60, 90],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "nortriptyline",
+        name: "Nortriptyline",
+        class: "TCA",
+        commonDoses: [10, 25, 50, 75, 100],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+      {
+        id: "trimipramine",
+        name: "Trimipramine",
+        class: "TCA",
+        commonDoses: [25, 50, 75, 100, 150],
+        halfLife: "long",
+        withdrawalRisk: "high",
+        ukLicensed: true
+      },
+
+      /* MAOIs – specialist only */
+      {
+        id: "phenelzine",
+        name: "Phenelzine (MAOI – specialist only)",
+        class: "MAOI",
+        commonDoses: [15, 30, 45, 60],
+        halfLife: "medium",
+        withdrawalRisk: "high",
+        ukLicensed: true,
+        specialistOnly: true,
+        noAutoSwitch: true
+      },
+      {
+        id: "tranylcypromine",
+        name: "Tranylcypromine (MAOI – specialist only)",
+        class: "MAOI",
+        commonDoses: [10, 20, 30, 40],
+        halfLife: "short",
+        withdrawalRisk: "high",
+        ukLicensed: true,
+        specialistOnly: true,
+        noAutoSwitch: true
+      },
+      {
+        id: "isocarboxazid",
+        name: "Isocarboxazid (MAOI – specialist only)",
+        class: "MAOI",
+        commonDoses: [10, 20, 30, 40, 60],
+        halfLife: "medium",
+        withdrawalRisk: "high",
+        ukLicensed: true,
+        specialistOnly: true,
+        noAutoSwitch: true
+      },
+      {
+        id: "moclobemide",
+        name: "Moclobemide (reversible MAOI-A)",
+        class: "MAOI",
+        commonDoses: [150, 300, 450, 600],
+        halfLife: "short",
+        withdrawalRisk: "medium",
+        ukLicensed: true,
+        specialistOnly: true,
+        noAutoSwitch: false
       }
-      // You can add TCAs, vortioxetine, etc. here later
     ];
 
-    // Sort commonly used first (already ordered), then alphabetically if you expand
-    const sortedAntidepressants = antidepressants; // for now as defined
+    const commonOrder = [
+      "sertraline",
+      "citalopram",
+      "fluoxetine",
+      "escitalopram",
+      "mirtazapine",
+      "venlafaxine_mr",
+      "duloxetine",
+      "amitriptyline",
+      "lofepramine",
+      "vortioxetine"
+    ];
 
-    // -------------------------
-    // Utility functions
-    // -------------------------
+    const sortedAntidepressants = [...antidepressants].sort((a, b) => {
+      const ia = commonOrder.indexOf(a.id);
+      const ib = commonOrder.indexOf(b.id);
+      if (ia !== -1 || ib !== -1) {
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      }
+      return a.name.localeCompare(b.name);
+    });
+
+    function getDrugById(id) {
+      return sortedAntidepressants.find(d => d.id === id);
+    }
+
     function populateDrugSelect(selectEl) {
       selectEl.innerHTML = "";
       sortedAntidepressants.forEach(drug => {
@@ -401,7 +652,7 @@
     }
 
     function populateDoseSelect(drugId, selectEl) {
-      const drug = sortedAntidepressants.find(d => d.id === drugId);
+      const drug = getDrugById(drugId);
       selectEl.innerHTML = "";
       if (!drug) return;
       drug.commonDoses.forEach(dose => {
@@ -412,146 +663,300 @@
       });
     }
 
-    function getDrugById(id) {
-      return sortedAntidepressants.find(d => d.id === id);
+    // ==========================
+    // Switching logic
+    // ==========================
+    function getCypCautions(from, to) {
+      const cautions = [];
+      if (from.id === "fluoxetine") {
+        cautions.push("Fluoxetine has a long half-life; interactions and CYP2D6 inhibition may persist for 5–6 weeks after stopping.");
+      }
+      if (from.id === "paroxetine") {
+        if (["duloxetine", "venlafaxine_ir", "venlafaxine_mr", "trazodone"].includes(to.id) || to.class === "TCA") {
+          cautions.push("Paroxetine is a potent CYP2D6 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
+        }
+      }
+      if (from.id === "fluvoxamine") {
+        if (["duloxetine", "agomelatine", "mirtazapine"].includes(to.id)) {
+          cautions.push("Fluvoxamine is a potent CYP1A2 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
+        }
+      }
+      return cautions;
     }
 
-    // -------------------------
-    // Switching logic (simple starter)
-    // -------------------------
+    function getSwitchStrategy(from, to, currentDose) {
+      const dose = Number(currentDose);
+
+      if (from.specialistOnly || to.specialistOnly || from.class === "MAOI" || to.class === "MAOI") {
+        return {
+          mode: "unsupported",
+          reason: "Switches involving MAOIs or specialist-only antidepressants should follow detailed SPS MAOI guidance and local mental health protocols."
+        };
+      }
+
+      if (from.id === to.id) {
+        return {
+          mode: "same_drug",
+          notes: "This is a dose adjustment rather than a switch. Consider gradual titration up or down and review response."
+        };
+      }
+
+      const fromClass = from.class;
+      const toClass = to.class;
+
+      if (from.id === "fluoxetine") {
+        return {
+          mode: "taper_stop_start",
+          taperWeeks: 2,
+          washoutDays: 4,
+          notes: "Reduce fluoxetine to 20 mg daily if higher, then stop. Wait 4–7 days before starting " + to.name + " at a low dose. Interactions may persist for 5–6 weeks."
+        };
+      }
+
+      if (fromClass === "SSRI" && toClass === "SSRI") {
+        return {
+          mode: "direct",
+          notes: "Direct switch is usually possible: stop " + from.name + " and start " + to.name +
+            " the following day at usual starting dose. Consider cross-taper if high relapse risk or previous withdrawal."
+        };
+      }
+
+      if (
+        (fromClass === "SSRI" && (toClass === "SNRI" || toClass === "NaSSA" || toClass === "Atypical")) ||
+        ((fromClass === "SNRI" || fromClass === "NaSSA" || fromClass === "Atypical") && toClass === "SSRI")
+      ) {
+        return {
+          mode: "cross_taper",
+          durationWeeks: 2,
+          notes: "Cross-taper over around 2–4 weeks (quicker or slower depending on tolerability and risk)."
+        };
+      }
+
+      if (fromClass === "SNRI" && toClass === "SNRI") {
+        return {
+          mode: "cross_taper",
+          durationWeeks: 2,
+          notes: "Cross-taper over around 2–4 weeks, monitoring BP and withdrawal."
+        };
+      }
+
+      const fromIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(fromClass);
+      const toIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(toClass);
+
+      if ((fromIsModern && toClass === "TCA") || (fromClass === "TCA" && toIsModern)) {
+        if (to.id === "clomipramine" || from.id === "clomipramine") {
+          return {
+            mode: "taper_stop_start",
+            taperWeeks: 2,
+            washoutDays: 0,
+            notes: "Avoid cross-taper with clomipramine due to increased serotonin syndrome risk. Taper and stop the first drug, then start low-dose " +
+              (to.id === "clomipramine" ? "clomipramine" : to.name) + " the following day."
+          };
+        } else {
+          return {
+            mode: "cautious_cross_or_taper",
+            durationWeeks: 2,
+            notes: "Either taper and stop the first antidepressant before starting the second at low dose, or perform a cautious cross-taper over 2–4 weeks depending on interaction risk."
+          };
+        }
+      }
+
+      if (fromClass === "TCA" && toClass === "TCA") {
+        return {
+          mode: "cross_taper",
+          durationWeeks: 2,
+          notes: "Taper first TCA while titrating the second up over 2–4 weeks. Avoid excessive total TCA dose."
+        };
+      }
+
+      return {
+        mode: "cross_taper",
+        durationWeeks: 2,
+        notes: "Use a cautious cross-taper over ~2–4 weeks and consult SPS switching tables for this specific pair."
+      };
+    }
+
     function generateSwitchPlan(fromDrugId, fromDose, toDrugId) {
       const from = getDrugById(fromDrugId);
       const to = getDrugById(toDrugId);
       const dose = Number(fromDose);
 
-      if (!from || !to || from.id === to.id) {
-        return {
-          clinician: "Please select two different antidepressants.",
-          sms: ""
-        };
+      if (!from || !to) {
+        return { clinician: "Please select both a current and a new antidepressant.", sms: "" };
       }
 
-      // high-level strategy: direct vs cross-taper
-      let strategy = "";
-      let weeks = [];
-      let cautions = [];
+      const strategy = getSwitchStrategy(from, to, dose);
 
-      if (from.class === "SSRI" && to.class === "SSRI") {
-        // SSRI -> SSRI
-        if (from.id === "fluoxetine" || to.id === "fluoxetine") {
-          // Include reminder about long half-life
-          strategy = "direct_with_caution";
-        } else {
-          strategy = "direct";
-        }
-      } else if (from.class === "SSRI" && (to.class === "SNRI" || to.class === "NaSSA")) {
-        strategy = "cross_taper_2_4w";
-      } else if ((from.class === "SNRI" || from.class === "NaSSA") && to.class === "SSRI") {
-        strategy = "cross_taper_2_4w";
-      } else {
-        strategy = "simple_cross_taper";
+      if (strategy.mode === "unsupported") {
+        const clinicianText =
+          `Switch from ${from.name} ${dose} mg OD to ${to.name}\n\n` +
+          `Automated plan not provided.\n` +
+          `• ${strategy.reason}\n` +
+          `• Refer to SPS MAOI / specialist switching guidance and local Trust or ICB protocols.\n` +
+          `• Consider discussion with psychiatry / mental health pharmacist.\n`;
+
+        const smsText =
+          `Your medication plan\n\n` +
+          `You are changing from ${from.name} to ${to.name}. Because of the type of medicines involved, ` +
+          `your GP or specialist will agree a personalised plan with you rather than using an automatic schedule.`;
+
+        return { clinician: clinicianText, sms: smsText };
       }
 
-      if (strategy === "direct") {
-        weeks.push(`Stop ${from.name} ${dose} mg once daily and start ${to.name} at usual starting dose the following day (e.g. ${to.commonDoses[0]} mg once daily).`);
-      } else if (strategy === "direct_with_caution") {
-        weeks.push(
-          `Stop ${from.name} ${dose} mg once daily and start ${to.name} at usual starting dose the following day.`,
-          `Be aware of fluoxetine's long half-life; monitor for interactions and adverse effects for several weeks.`
-        );
-      } else {
-        // Cross-taper: simple 2-week example, to be refined
-        const halfDose = dose / 2;
-        weeks.push(
-          `Week 1: Reduce ${from.name} from ${dose} mg to ${halfDose} mg once daily. Start ${to.name} at usual starting dose (e.g. ${to.commonDoses[0]} mg once daily).`,
-          `Week 2: Stop ${from.name}. Continue ${to.name}, increasing towards target dose as tolerated.`
-        );
+      const cypCautions = getCypCautions(from, to);
+      const scheduleLines = [];
+      const doseTextFrom = `${from.name} ${dose} mg once daily`;
+
+      switch (strategy.mode) {
+        case "direct":
+          scheduleLines.push(
+            `Stop ${doseTextFrom}, and start ${to.name} at usual starting dose (e.g. ${to.commonDoses[0]} mg once daily) the following day.`
+          );
+          break;
+
+        case "cross_taper":
+          const halfDose = Math.max(Math.round((dose * 0.5) * 10) / 10, dose * 0.25);
+          scheduleLines.push(
+            `Week 1–2: Reduce ${from.name} from ${dose} mg to ${halfDose} mg once daily and start ${to.name} at a low dose (e.g. ${to.commonDoses[0]} mg once daily).`,
+            `Week 3–4: Stop ${from.name}. Increase ${to.name} towards target dose as tolerated.`
+          );
+          break;
+
+        case "cautious_cross_or_taper":
+          scheduleLines.push(
+            `Option 1 – taper then start: reduce ${from.name} gradually over ~2–4 weeks and stop, then start low-dose ${to.name} the following day.`,
+            `Option 2 – cautious cross-taper over ~2–4 weeks where interaction risk is low and close monitoring is possible.`
+          );
+          break;
+
+        case "taper_stop_start":
+          scheduleLines.push(
+            `Weeks 1–2: Gradually reduce ${from.name} (e.g. reduce to 50% of current dose, then if fluoxetine consider 20 mg daily).`,
+            `Then stop ${from.name} and wait ${strategy.washoutDays || 0}–${(strategy.washoutDays || 0) + 3} days.`,
+            `Start ${to.name} at low dose (e.g. ${to.commonDoses[0]} mg once daily) and titrate according to response.`
+          );
+          break;
+
+        case "same_drug":
+          scheduleLines.push(`This is a dose adjustment of ${from.name} rather than a switch. Consider gradual titration and regular review.`);
+          break;
+
+        default:
+          scheduleLines.push("Use a cautious cross-taper over 2–4 weeks, guided by SPS and local guidance.");
       }
 
-      cautions.push(
-        "Warned about potential transient increase in anxiety, GI upset, sleep disturbance and risk of serotonin syndrome during overlap.",
-        "Advised to seek urgent help (111/999/A&E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm develop."
-      );
+      const standardCautions = [
+        "Warned about possible transient increase in anxiety, GI upset, sleep disturbance and withdrawal symptoms during the switch.",
+        "Advised on risk of serotonin syndrome, particularly when drugs overlap.",
+        "Advised to seek urgent help (111/999/A&amp;E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
+        "Plan for review within 2–4 weeks, sooner if high risk."
+      ];
 
       const clinicianText =
         `Plan – switch from ${from.name} ${dose} mg OD to ${to.name}\n\n` +
-        weeks.map((w, i) => `• ${w}`).join("\n") +
-        `\n\nCounselling & safety net:\n` +
-        cautions.map(c => `• ${c}`).join("\n") +
-        `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies – check full SPS tables and local guidance for this specific switch.`;
+        scheduleLines.map(l => `• ${l}`).join("\n") +
+        `\n\nRationale & cautions:\n` +
+        `• ${strategy.notes}\n` +
+        (cypCautions.length ? cypCautions.map(c => `• ${c}`).join("\n") + "\n" : "") +
+        standardCautions.map(c => `• ${c}`).join("\n") +
+        `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies; check detailed SPS tables for this specific pair.`;
 
-      const smsText =
-        `Your medication plan\n\n` +
-        `You are changing from ${from.name} ${dose} mg daily to ${to.name}.\n\n` +
-        (strategy === "direct"
-          ? `Stop ${from.name} and start ${to.name} at the usual starting dose the next day (your GP will confirm the exact dose).\n\n`
-          : `Week 1: lower ${from.name} and start ${to.name} at a low dose.\nWeek 2: stop ${from.name} and continue ${to.name}.\n\n`) +
-        `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, have severe diarrhoea or thoughts of harming yourself.`;
+      let smsText = `Your medication plan\n\nYou are changing from ${from.name} ${dose} mg daily to ${to.name}.\n\n`;
+
+      if (strategy.mode === "direct") {
+        smsText +=
+          `Stop ${from.name} and start ${to.name} at the usual starting dose the next day (your GP will confirm the exact dose).\n\n`;
+      } else if (strategy.mode === "cross_taper" || strategy.mode === "cautious_cross_or_taper") {
+        smsText +=
+          `We will gradually reduce ${from.name} while starting ${to.name} at a low dose over a few weeks.\n\n`;
+      } else if (strategy.mode === "taper_stop_start") {
+        smsText +=
+          `We will slowly reduce ${from.name}, then have a short gap before starting ${to.name} at a low dose.\n\n`;
+      } else if (strategy.mode === "same_drug") {
+        smsText +=
+          `We are adjusting the dose of ${from.name} gradually rather than changing to a new medicine.\n\n`;
+      }
+
+      smsText +=
+        `Contact the surgery, NHS 111 or 999/A&amp;E urgently if you feel very agitated, confused, feverish, ` +
+        `have severe diarrhoea, or have thoughts of harming yourself.`;
 
       return { clinician: clinicianText, sms: smsText };
     }
 
-    // -------------------------
-    // Stopping logic (simple proportional taper)
-    // -------------------------
+    // ==========================
+    // Stopping logic
+    // ==========================
     function generateStopPlan(drugId, dose, durationBand) {
       const drug = getDrugById(drugId);
       const startDose = Number(dose);
       if (!drug || !startDose) {
-        return {
-          clinician: "Please select a drug and dose.",
-          sms: ""
-        };
+        return { clinician: "Please select a drug and dose.", sms: "" };
       }
 
-      // Decide number of steps based on duration
-      let steps;
+      let baseSteps;
+      let baseWeeksPerStep;
       switch (durationBand) {
         case "short":
-          steps = 2;
+          baseSteps = 2;
+          baseWeeksPerStep = 1;
           break;
         case "medium":
-          steps = 3;
+          baseSteps = 3;
+          baseWeeksPerStep = 2;
           break;
         case "long":
-          steps = 4;
+          baseSteps = 4;
+          baseWeeksPerStep = 2;
           break;
         case "very_long":
-          steps = 6;
+          baseSteps = 6;
+          baseWeeksPerStep = 3;
           break;
         default:
-          steps = 3;
+          baseSteps = 3;
+          baseWeeksPerStep = 2;
       }
 
-      // Adjust for half-life / withdrawal risk
-      if (drug.withdrawalRisk === "high" && steps < 4) {
-        steps += 1;
-      }
-      if (drug.halfLife === "long" && steps > 3) {
-        steps -= 1;
+      let steps = baseSteps;
+      if (drug.withdrawalRisk === "very_high") steps += 2;
+      else if (drug.withdrawalRisk === "high") steps += 1;
+
+      if (drug.halfLife === "long") {
+        steps = Math.max(2, steps - 1);
       }
 
-      // Build taper schedule: proportional reductions
+      steps = Math.min(8, Math.max(2, steps));
+
+      let weeksPerStep = baseWeeksPerStep;
+      if (drug.withdrawalRisk === "very_high" || drug.withdrawalRisk === "high") {
+        weeksPerStep = Math.max(2, weeksPerStep);
+      }
+
       const schedule = [];
       let current = startDose;
+
       for (let i = 1; i <= steps; i++) {
         const isLast = i === steps;
         if (isLast) {
           schedule.push({ step: i, dose: 0 });
         } else {
-          current = Math.round((current * 0.5) * 10) / 10; // 50% each step, rounded
-          if (current < 0.25 * startDose && current !== 0) {
-            // avoid going too tiny too early
-            current = Math.round((startDose * 0.25) * 10) / 10;
+          let factor = 0.5;
+          if (i > 2) factor = 0.7;
+
+          current = current * factor;
+
+          const minProportion = 0.2;
+          if (current < startDose * minProportion && !isLast) {
+            current = startDose * minProportion;
           }
+
+          const rounding = current >= 10 ? 5 : 1;
+          current = Math.max(rounding, Math.round(current / rounding) * rounding);
+
           schedule.push({ step: i, dose: current });
         }
       }
-
-      // Convert steps to weeks (rough guide)
-      let weeksPerStep = 2;
-      if (durationBand === "short") weeksPerStep = 1;
-      if (durationBand === "very_long") weeksPerStep = 3;
 
       const lines = schedule.map((s, index) => {
         const startWeek = index * weeksPerStep + 1;
@@ -563,26 +968,81 @@
         }
       });
 
+      const durationTextMap = {
+        short: "< 6 weeks",
+        medium: "6 weeks – 6 months",
+        long: "6 – 24 months",
+        very_long: "> 2 years"
+      };
+      const durationText = durationTextMap[durationBand] || "unspecified";
+
       const clinicianText =
-        `Plan – gradual reduction of ${drug.name} ${startDose} mg OD (duration: ${durationBand.replace("_", " ")})\n\n` +
+        `Plan – gradual reduction of ${drug.name} ${startDose} mg OD (duration: ${durationText})\n\n` +
         lines.map(l => `• ${l}`).join("\n") +
-        `\n\nCounselling & safety net:\n` +
-        `• Explained rationale for gradual taper per NICE NG222 / QS8 and RCPsych guidance (proportional reductions, slower for short half-life / higher withdrawal risk drugs).\n` +
-        `• Advised to monitor for withdrawal symptoms (dizziness, "electric shocks", flu-like symptoms, sleep disturbance, mood changes) and relapse of depression/anxiety.\n` +
-        `• Advised to contact the surgery if withdrawal symptoms are severe/persistent or if depressive symptoms return; consider pausing or slowing taper.\n`;
+        `\n\nRationale & counselling:\n` +
+        `• Uses proportional dose reductions over several weeks/months, in line with NICE NG222 / QS8 and RCPsych guidance.\n` +
+        `• Slower taper chosen for higher withdrawal risk drugs (e.g. paroxetine, venlafaxine).\n` +
+        `• Advised patient about withdrawal symptoms (dizziness, "electric shocks", flu-like symptoms, sleep disturbance, anxiety, low mood) and difference from relapse.\n` +
+        `• Advised to contact the surgery if withdrawal is severe/persistent or if depressive symptoms return; consider pausing or slowing taper.\n` +
+        `• Documented crisis/safety netting (self-harm, suicidal ideation) and agreed review plan.\n`;
 
       const smsText =
         `Plan to reduce ${drug.name}\n\n` +
-        `You are on ${drug.name} ${startDose} mg daily. We will reduce slowly:\n` +
+        `You are on ${drug.name} ${startDose} mg daily. We will reduce this gradually:\n` +
         lines.map(l => "- " + l.replace(`${drug.name} `, "")).join("\n") +
-        `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, contact the surgery, NHS 111 or 999/A&E urgently.`;
+        `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, ` +
+        `contact the surgery, NHS 111 or 999/A&amp;E urgently.`;
 
       return { clinician: clinicianText, sms: smsText };
     }
 
-    // -------------------------
+    // ==========================
+    // Copy to clipboard
+    // ==========================
+    function copyToClipboard(text) {
+      if (!navigator.clipboard) {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+        return;
+      }
+      navigator.clipboard.writeText(text).catch(() => {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("copy-btn")) {
+        const targetId = e.target.dataset.target;
+        const contentEl = document.getElementById(targetId);
+        if (!contentEl) return;
+        const content = contentEl.textContent.trim();
+        if (!content) return;
+
+        copyToClipboard(content);
+
+        const btn = e.target;
+        const original = btn.textContent;
+        btn.textContent = "Copied!";
+        btn.classList.add("copied");
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove("copied");
+        }, 1500);
+      }
+    });
+
+    // ==========================
     // UI wiring
-    // -------------------------
+    // ==========================
     document.addEventListener("DOMContentLoaded", () => {
       const fromDrugSelect = document.getElementById("fromDrug");
       const fromDoseSelect = document.getElementById("fromDose");
@@ -596,7 +1056,6 @@
       populateDrugSelect(toDrugSelect);
       populateDrugSelect(stopDrugSelect);
 
-      // initial doses
       populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
       populateDoseSelect(stopDrugSelect.value, stopDoseSelect);
 
@@ -630,7 +1089,6 @@
         document.getElementById("stopSMS").textContent = "";
       });
 
-      // Tab switching
       const tabButtons = document.querySelectorAll(".tab-button");
       const tabs = {
         switching: document.getElementById("switching"),
