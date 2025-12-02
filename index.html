@@ -1509,30 +1509,33 @@
       });
 
       // Generate stop
-      document.getElementById("generateStop").addEventListener("click", () => {
-        const drugId = stopDrugSelect.value;
-        const dose = stopDoseSelect.value;
-        const durationBand = durationSelect.value;
-        const drug = getDrugById(drugId);
+document.getElementById("generateStop").addEventListener("click", () => {
+    userHasClickedGenerateStop = true; // ← NEW
 
-        if (!drug || !dose) {
-          document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
-          document.getElementById("stopSMS").textContent = "";
-          return;
-        }
+    const drugId = stopDrugSelect.value;
+    const dose = stopDoseSelect.value;
+    const durationBand = durationSelect.value;
+    const drug = getDrugById(drugId);
 
-        if (drug.requiresSwitchForTaper) {
-          openTaperModal({
+    if (!drug || !dose) {
+        document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
+        document.getElementById("stopSMS").textContent = "";
+        return;
+    }
+
+    if (drug.requiresSwitchForTaper && userHasClickedGenerateStop) { // ← MODIFIED
+        openTaperModal({
             sourceDrugId: drugId,
             sourceDose: dose,
             durationBand
-          });
-          return;
-        }
+        });
+        return;
+    }
 
-        const res = generateStopPlan(drugId, dose, durationBand);
-        document.getElementById("stopClinician").textContent = res.clinician;
-        document.getElementById("stopSMS").textContent = res.sms;
+    const res = generateStopPlan(drugId, dose, durationBand);
+    document.getElementById("stopClinician").textContent = res.clinician;
+    document.getElementById("stopSMS").textContent = res.sms;
+});
       });
 
       document.getElementById("clearStop").addEventListener("click", () => {
@@ -1571,4 +1574,5 @@
   </script>
 </body>
 </html>
+
 
