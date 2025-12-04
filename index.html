@@ -13,6 +13,17 @@
 </header>
 
 <main>
+  <!-- Global toggle for common vs all antidepressants -->
+  <div style="text-align:right; margin-bottom:0.5rem;">
+    <button
+      id="toggleAntidepressantList"
+      type="button"
+      style="background:none;border:none;color:#005eb8;padding:0;font-size:0.85rem;text-decoration:underline;cursor:pointer;"
+    >
+      Show all antidepressants ▼
+    </button>
+  </div>
+
   <div class="tabs">
     <button class="tab-button active" data-tab="switching">Switching</button>
     <button class="tab-button" data-tab="stopping">Stopping / cessation</button>
@@ -200,6 +211,7 @@
   let pendingTaperOptions = [];
   let selectedTaperOptionId = null;
   let lastFocusedElementBeforeModal = null;
+  let showAllAntidepressants = false; // collapsed by default
 
   // ========= Antidepressant dataset =========
   const antidepressants = [
@@ -567,6 +579,7 @@
     }
   ];
 
+  // Common-order list (also used for overall sorting)
   const commonOrder = [
     "sertraline",
     "citalopram",
@@ -577,9 +590,23 @@
     "venlafaxine_ir",
     "duloxetine",
     "amitriptyline",
-    "Trazodone",
+    "trazodone",
     "lofepramine",
     "vortioxetine"
+  ];
+
+  // Top 10 visible by default (collapsed state)
+  const commonVisibleIds = [
+    "sertraline",
+    "citalopram",
+    "fluoxetine",
+    "escitalopram",
+    "mirtazapine",
+    "venlafaxine_mr",
+    "venlafaxine_ir",
+    "duloxetine",
+    "amitriptyline",
+    "trazodone"
   ];
 
   const sortedAntidepressants = [...antidepressants].sort((a, b) => {
@@ -597,14 +624,33 @@
     return sortedAntidepressants.find(d => d.id === id);
   }
 
-  function populateDrugSelect(selectEl) {
+  // Populate drug lists with collapsed/expanded behaviour
+  function populateDrugSelect(selectEl, showAll, preferredValue) {
     selectEl.innerHTML = "";
-    sortedAntidepressants.forEach(drug => {
+    const baseList = showAll
+      ? sortedAntidepressants
+      : sortedAntidepressants.filter(d => commonVisibleIds.includes(d.id));
+
+    baseList.forEach(drug => {
       const opt = document.createElement("option");
       opt.value = drug.id;
-      opt.textContent = drug.name;
+
+      let label = drug.name;
+      const flags = [];
+      if (drug.ukLicensed === false) flags.push("unlicensed");
+      if (drug.specialistOnly) flags.push("specialist only");
+      if (flags.length && showAll) {
+        label += " (" + flags.join(", ") + ")";
+      }
+      opt.textContent = label;
       selectEl.appendChild(opt);
     });
+
+    if (preferredValue && [...selectEl.options].some(o => o.value === preferredValue)) {
+      selectEl.value = preferredValue;
+    } else if (selectEl.options.length) {
+      selectEl.selectedIndex = 0;
+    }
   }
 
   function populateDoseSelect(drugId, selectEl, preferredValue) {
@@ -753,49 +799,49 @@
       };
     }
 
-  const fromIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(fromClass);
-  const toIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(toClass);
+    const fromIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(fromClass);
+    const toIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(toClass);
 
-  if (fromClass === "SNRI" && toClass === "SNRI") {
-    return {
-      mode: "cross_taper",
-      durationWeeks: 2,
-      notes: "Cross-taper over around 2–4 weeks, monitoring BP and withdrawal symptoms."
-    };
-  }
-
-  if ((fromIsModern && toClass === "TCA") || (fromClass === "TCA" && toIsModern)) {
-    if (to.id === "clomipramine" || from.id === "clomipramine") {
+    if (fromClass === "SNRI" && toClass === "SNRI") {
       return {
-        mode: "taper_stop_start",
-        taperWeeks: 2,
-        washoutDays: 0,
-        notes: "Avoid cross-taper with clomipramine due to increased serotonin syndrome risk. Taper and stop the first drug, then start low-dose " +
-          (to.id === "clomipramine" ? "clomipramine" : to.name) + " the following day."
-      };
-    } else {
-      return {
-        mode: "cautious_cross_or_taper",
+        mode: "cross_taper",
         durationWeeks: 2,
-        notes: "Either taper and stop the first antidepressant before starting the second at low dose, or perform a cautious cross-taper over 2–4 weeks depending on interaction risk and patient factors."
+        notes: "Cross-taper over around 2–4 weeks, monitoring BP and withdrawal symptoms."
       };
     }
-  }
 
-  if (fromClass === "TCA" && toClass === "TCA") {
+    if ((fromIsModern && toClass === "TCA") || (fromClass === "TCA" && toIsModern)) {
+      if (to.id === "clomipramine" || from.id === "clomipramine") {
+        return {
+          mode: "taper_stop_start",
+          taperWeeks: 2,
+          washoutDays: 0,
+          notes: "Avoid cross-taper with clomipramine due to increased serotonin syndrome risk. Taper and stop the first drug, then start low-dose " +
+            (to.id === "clomipramine" ? "clomipramine" : to.name) + " the following day."
+        };
+      } else {
+        return {
+          mode: "cautious_cross_or_taper",
+          durationWeeks: 2,
+          notes: "Either taper and stop the first antidepressant before starting the second at low dose, or perform a cautious cross-taper over 2–4 weeks depending on interaction risk and patient factors."
+        };
+      }
+    }
+
+    if (fromClass === "TCA" && toClass === "TCA") {
+      return {
+        mode: "cross_taper",
+        durationWeeks: 2,
+        notes: "Taper the first TCA while titrating the second up over 2–4 weeks. Avoid excessive total TCA dose and consider ECG/QT if indicated."
+      };
+    }
+
     return {
       mode: "cross_taper",
       durationWeeks: 2,
-      notes: "Taper the first TCA while titrating the second up over 2–4 weeks. Avoid excessive total TCA dose and consider ECG/QT if indicated."
+      notes: "Use a cautious cross-taper over ~2–4 weeks and consult SPS switching tables for this specific pair if unsure."
     };
   }
-
-  return {
-    mode: "cross_taper",
-    durationWeeks: 2,
-    notes: "Use a cautious cross-taper over ~2–4 weeks and consult SPS switching tables for this specific pair if unsure."
-  };
-}
 
   // ========= Venlafaxine IR daily regimen text =========
   const venlafaxineIrRegimens = {
@@ -923,12 +969,11 @@
     return steps;
   }
 
-  // === NEW: apply taper profiles with tails only for EXTENDED/SLOW (A1) ===
+  // === apply taper profiles with tails only for EXTENDED/SLOW (A1) ===
   function applyTaperProfileToSteps(steps, profile) {
     if (!steps || !steps.length) return [];
     if (!profile || profile === "standard") return steps;
 
-    // identify last non-zero dose in base steps
     let lastNonZeroIndex = -1;
     for (let i = steps.length - 1; i >= 0; i--) {
       if (steps[i].dose > 0) {
@@ -943,7 +988,6 @@
       const expanded = [];
 
       steps.forEach((s, i) => {
-        // ignore the final zero-dose step here – we'll re-add stop at the end
         if (i === steps.length - 1 && s.dose === 0) {
           return;
         }
@@ -957,12 +1001,10 @@
       });
 
       if (lastNonZeroDose > 0) {
-        // add reduced-frequency tail at the lowest maintained (non-zero) dose
         expanded.push({ dose: lastNonZeroDose, pattern: "alt_day" });
         expanded.push({ dose: lastNonZeroDose, pattern: "every_3_days" });
         expanded.push({ dose: 0, pattern: "daily" });
       } else {
-        // edge case: no non-zero steps – just ensure final stop
         if (!expanded.some(s => s.dose === 0)) {
           expanded.push({ dose: 0, pattern: "daily" });
         }
@@ -1671,24 +1713,25 @@
     userHasClickedGenerateStop = false;
 
     const state = loadState();
+    showAllAntidepressants = !!state.showAllAntidepressants;
 
-    populateDrugSelect(fromDrugSelect);
-    populateDrugSelect(toDrugSelect);
-    populateDrugSelect(stopDrugSelect);
-
-    if (state.fromDrug && getDrugById(state.fromDrug)) {
-      fromDrugSelect.value = state.fromDrug;
+    // Toggle label function
+    const toggleBtn = document.getElementById("toggleAntidepressantList");
+    function updateToggleLabel() {
+      if (!toggleBtn) return;
+      toggleBtn.textContent = showAllAntidepressants
+        ? "Hide uncommon antidepressants ▲"
+        : "Show all antidepressants ▼";
     }
+    updateToggleLabel();
+
+    // Initial population of selects
+    populateDrugSelect(fromDrugSelect, showAllAntidepressants, state.fromDrug && getDrugById(state.fromDrug) ? state.fromDrug : null);
+    populateDrugSelect(toDrugSelect, showAllAntidepressants, state.toDrug && getDrugById(state.toDrug) ? state.toDrug : null);
+    populateDrugSelect(stopDrugSelect, showAllAntidepressants, state.stopDrug && getDrugById(state.stopDrug) ? state.stopDrug : null);
+
     populateDoseSelect(fromDrugSelect.value, fromDoseSelect, state.fromDose);
-
-    if (state.toDrug && getDrugById(state.toDrug)) {
-      toDrugSelect.value = state.toDrug;
-    }
     populateToDrugDose(toDrugSelect.value, toDrugDoseSelect, state.toDrugDose);
-
-    if (state.stopDrug && getDrugById(state.stopDrug)) {
-      stopDrugSelect.value = state.stopDrug;
-    }
     populateDoseSelect(stopDrugSelect.value, stopDoseSelect, state.stopDose);
 
     if (state.duration) {
@@ -1732,6 +1775,28 @@
         }
       });
     });
+
+    // Toggle showAll / collapsed lists
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", () => {
+        showAllAntidepressants = !showAllAntidepressants;
+        updateToggleLabel();
+
+        const currentFrom = fromDrugSelect.value;
+        const currentTo = toDrugSelect.value;
+        const currentStop = stopDrugSelect.value;
+
+        populateDrugSelect(fromDrugSelect, showAllAntidepressants, currentFrom);
+        populateDrugSelect(toDrugSelect, showAllAntidepressants, currentTo);
+        populateDrugSelect(stopDrugSelect, showAllAntidepressants, currentStop);
+
+        populateDoseSelect(fromDrugSelect.value, fromDoseSelect, state.fromDose);
+        populateToDrugDose(toDrugSelect.value, toDrugDoseSelect, state.toDrugDose);
+        populateDoseSelect(stopDrugSelect.value, stopDoseSelect, state.stopDose);
+
+        saveState({ showAllAntidepressants });
+      });
+    }
 
     fromDrugSelect.addEventListener("change", () => {
       populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
@@ -1849,5 +1914,3 @@
 </script>
 </body>
 </html>
-
-
