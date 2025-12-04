@@ -84,6 +84,11 @@
       gap: 0.8rem 1.5rem;
     }
 
+    /* Ensure switching grid is a clear 2×2 layout where possible */
+    .switch-grid {
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+
     .field label {
       display: block;
       font-size: 0.9rem;
@@ -350,25 +355,26 @@
       and use clinical judgement.
     </p>
 
-    <div class="grid">
-     <div class="field">
-    <label for="fromDrug">Current antidepressant</label>
-    <select id="fromDrug"></select>
-</div>
-<div class="field">
-    <label for="fromDose">Current dose (mg/day)</label>
-    <select id="fromDose"></select>
-</div>
+    <div class="grid switch-grid">
+      <div class="field">
+        <label for="fromDrug">Current antidepressant</label>
+        <select id="fromDrug"></select>
+      </div>
 
-<div class="field">
-    <label for="toDrug">New antidepressant</label>
-    <select id="toDrug"></select>
-</div>
-<div class="field">
-    <label for="toDrugDose">Starting dose (mg/day)</label>
-    <select id="toDrugDose"></select>
-</div>
+      <div class="field">
+        <label for="toDrug">New antidepressant</label>
+        <select id="toDrug"></select>
+      </div>
 
+      <div class="field">
+        <label for="fromDose">Current dose (mg/day)</label>
+        <select id="fromDose"></select>
+      </div>
+
+      <div class="field">
+        <label for="toDrugDose">Starting dose (mg/day)</label>
+        <select id="toDrugDose"></select>
+      </div>
     </div>
 
     <div class="button-row">
@@ -951,7 +957,6 @@
     const rec = drug.recommendedStart || drug.dailyDoses[0];
     const ger = drug.geriatricStart && drug.geriatricStart !== rec ? drug.geriatricStart : null;
 
-    // If there is a distinct ≥65 recommended dose, put it first, in red
     if (ger) {
       const opt = document.createElement("option");
       opt.value = ger;
@@ -961,7 +966,7 @@
     }
 
     drug.dailyDoses.forEach(d => {
-      if (ger && d === ger) return; // already added
+      if (ger && d === ger) return;
       const opt = document.createElement("option");
       opt.value = d;
       if (d === rec) {
@@ -1159,7 +1164,6 @@
     const minDose = Math.min(...drug.dailyDoses);
     const isLowestDose = startDose === minDose;
 
-    // Lowest-dose branch – use frequency taper
     if (isLowestDose) {
       const steps = [];
       const highRisk = (drug.withdrawalRisk === "high" || drug.withdrawalRisk === "very_high");
@@ -1189,19 +1193,16 @@
       return steps;
     }
 
-    // Not at lowest dose – build discrete ladder
     const allLevelsAsc = [...drug.dailyDoses]
       .filter(d => d <= startDose)
       .sort((a, b) => a - b);
     const allLevelsDesc = [...allLevelsAsc].sort((a, b) => b - a);
 
-    // Remove starting dose from ladder (no "week 1: same")
     const nonZeroLevelsDesc = allLevelsDesc.filter(d => d < startDose);
     if (!nonZeroLevelsDesc.length) {
       return computeBaseTaperSteps(drug, minDose, durationBand);
     }
 
-    // SHORT duration: fast halving taper
     if (durationBand === "short") {
       const used = [];
       let current = startDose;
@@ -1239,7 +1240,6 @@
       return steps;
     }
 
-    // MEDIUM / LONG / VERY_LONG – full ladder (minus start) then zero, descending
     const fullNonZeroDesc = nonZeroLevelsDesc.slice().sort((a, b) => b - a);
 
     const steps = fullNonZeroDesc.map(d => ({
@@ -1601,8 +1601,7 @@
     switch (strategy.mode) {
       case "direct":
         scheduleLines.push(
-         `Stop ${doseTextFrom}, and start ${to.name} ${chosenToStartDose} mg once daily the following day.`
-
+          `Stop ${doseTextFrom}, and start ${to.name} ${chosenToStartDose} mg once daily the following day.`
         );
         break;
 
@@ -1681,9 +1680,7 @@
 
       if (strategy.mode === "direct") {
         smsText +=
-         smsText +=
-  `You will stop ${from.name} and start ${to.name} ${chosenToStartDose} mg once daily the next day.\n\n`;
-
+          `You will stop ${from.name} and start ${to.name} ${chosenToStartDose} mg once daily the next day.\n\n`;
       } else if (strategy.mode === "taper_stop_start") {
         smsText +=
           `We will slowly reduce ${from.name}, then have a short gap before starting ${to.name} ${chosenToStartDose} mg once daily.\n\n`;
@@ -2162,6 +2159,3 @@
 </script>
 </body>
 </html>
-
-
-
