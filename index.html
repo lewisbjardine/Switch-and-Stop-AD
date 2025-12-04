@@ -1193,14 +1193,18 @@ return steps;
         return out;
       }
 
-      if (profile === "slow" || profile === "micro") {
-        const repeat = profile === "slow" ? 3 : 3;
-        steps.forEach((s, i) => {
-          if (i === lastIndex) {
-            out.push(s);
-          } else {
-            for (let j = 0; j < repeat; j++) out.push(s);
-          }
+if (profile === "slow") {
+  const repeat = 3;
+  steps.forEach((s, i) => {
+    if (i === lastIndex) {
+      out.push(s);
+    } else {
+      for (let j = 0; j < repeat; j++) out.push(s);
+    }
+  });
+  return out;
+}
+
         });
         return out;
       }
@@ -2088,5 +2092,6 @@ return steps;
   </script>
 </body>
 </html>
+
 
 
