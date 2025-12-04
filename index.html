@@ -202,7 +202,6 @@
       background: #2e7d32;
     }
 
-    /* Taper profile buttons */
     .taper-profile-row {
       margin-top: 1rem;
       font-size: 0.85rem;
@@ -232,7 +231,6 @@
       color: var(--nhs-white);
     }
 
-    /* Modal styling */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -412,8 +410,7 @@
       <h2>Plan antidepressant cessation</h2>
       <p style="font-size:0.9rem">
         Generates a proportional taper based on duration of use, withdrawal risk and tablet strengths, using realistic
-        UK BNF doses. For lowest available doses it may use alternate-day or every-3-days dosing. Output is week-by-week
-        for both clinician and patient.
+        UK BNF doses. Lowest doses may use alternate-day or reduced-frequency dosing. Output is week-by-week.
       </p>
 
       <div class="grid">
@@ -496,7 +493,7 @@
     Switch &amp; Stop AD – beta | Last updated: Dec 2025
   </footer>
 
-  <!-- Modal for choosing taper pathway when direct taper is not possible -->
+  <!-- Modal -->
   <div id="taperModalOverlay" class="modal-overlay hidden" style="display:none;">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="taperModalTitle">
       <h3 id="taperModalTitle">Choose taper pathway</h3>
@@ -514,15 +511,15 @@
   </div>
 
   <script>
-    // ===== Global state =====
+    // ========= Global state =========
     let userHasClickedGenerateStop = false;
+    let taperProfile = "standard";
     let pendingTaperContext = null;
     let pendingTaperOptions = [];
     let selectedTaperOptionId = null;
     let lastFocusedElementBeforeModal = null;
-    let taperProfile = "standard";
 
-    // ===== Antidepressant dataset (total daily doses + unit strengths) =====
+    // ========= Antidepressant dataset =========
     const antidepressants = [
       // SSRIs
       {
@@ -534,7 +531,7 @@
         withdrawalRisk: "medium",
         ukLicensed: true,
         requiresSwitchForTaper: false,
-        unitStrengths: [100, 50, 25] // tablets
+        unitStrengths: [100, 50, 25]
       },
       {
         id: "fluoxetine",
@@ -545,7 +542,7 @@
         withdrawalRisk: "low",
         ukLicensed: true,
         requiresSwitchForTaper: false,
-        unitStrengths: [60, 20, 10] // capsules
+        unitStrengths: [60, 20, 10]
       },
       {
         id: "citalopram",
@@ -602,7 +599,7 @@
         withdrawalRisk: "very_high",
         ukLicensed: true,
         requiresSwitchForTaper: false,
-        unitStrengths: [150, 75, 37.5] // tablets
+        unitStrengths: [150, 75, 37.5]
       },
       {
         id: "venlafaxine_mr",
@@ -613,7 +610,7 @@
         withdrawalRisk: "very_high",
         ukLicensed: true,
         requiresSwitchForTaper: true,
-        unitStrengths: [150, 75, 37.5] // MR capsules
+        unitStrengths: [150, 75, 37.5]
       },
       {
         id: "duloxetine",
@@ -624,7 +621,7 @@
         withdrawalRisk: "medium",
         ukLicensed: true,
         requiresSwitchForTaper: true,
-        unitStrengths: [60, 30] // capsules
+        unitStrengths: [60, 30]
       },
 
       // NaSSA / atypical
@@ -684,7 +681,7 @@
         unitStrengths: [150]
       },
 
-      // TCAs and related
+      // TCAs
       {
         id: "amitriptyline",
         name: "Amitriptyline",
@@ -905,31 +902,26 @@
       }
     }
 
-    // ===== Hybrid switching logic (SPS-style + exceptions) =====
+    // ========= CYP cautions & switch exceptions =========
     function getCypCautions(from, to) {
       const cautions = [];
-
       if (from.id === "fluoxetine") {
         cautions.push("Fluoxetine has a long half-life; interactions and CYP2D6 inhibition may persist for 5–6 weeks after stopping.");
       }
-
       if (from.id === "paroxetine") {
         if (["duloxetine", "venlafaxine_ir", "venlafaxine_mr", "trazodone"].includes(to.id) || to.class === "TCA") {
           cautions.push("Paroxetine is a potent CYP2D6 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
         }
       }
-
       if (from.id === "fluvoxamine") {
         if (["duloxetine", "agomelatine", "mirtazapine"].includes(to.id)) {
           cautions.push("Fluvoxamine is a potent CYP1A2 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
         }
       }
-
       return cautions;
     }
 
     function getPairwiseException(from, to) {
-      // Fluoxetine -> venlafaxine
       if (from.id === "fluoxetine" && (to.id === "venlafaxine_ir" || to.id === "venlafaxine_mr")) {
         return {
           mode: "taper_stop_start",
@@ -938,7 +930,6 @@
         };
       }
 
-      // Any -> MAOI or MAOI -> any
       if (to.class === "MAOI" || from.class === "MAOI") {
         return {
           mode: "unsupported",
@@ -946,7 +937,6 @@
         };
       }
 
-      // SSRI/SNRI -> clomipramine
       if (to.id === "clomipramine" && ["SSRI", "SNRI"].includes(from.class)) {
         return {
           mode: "taper_stop_start",
@@ -988,7 +978,6 @@
         };
       }
 
-      // SSRI -> SSRI
       if (fromClass === "SSRI" && toClass === "SSRI") {
         return {
           mode: "direct",
@@ -997,7 +986,6 @@
         };
       }
 
-      // SSRI <-> SNRI/NaSSA/Atypical
       if (
         (fromClass === "SSRI" && (toClass === "SNRI" || toClass === "NaSSA" || toClass === "Atypical")) ||
         ((fromClass === "SNRI" || fromClass === "NaSSA" || fromClass === "Atypical") && toClass === "SSRI")
@@ -1009,7 +997,6 @@
         };
       }
 
-      // SNRI -> SNRI
       if (fromClass === "SNRI" && toClass === "SNRI") {
         return {
           mode: "cross_taper",
@@ -1018,7 +1005,6 @@
         };
       }
 
-      // Modern <-> TCA
       const fromIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(fromClass);
       const toIsModern = ["SSRI", "SNRI", "NaSSA", "Atypical", "NDRI"].includes(toClass);
 
@@ -1040,7 +1026,6 @@
         }
       }
 
-      // TCA -> TCA
       if (fromClass === "TCA" && toClass === "TCA") {
         return {
           mode: "cross_taper",
@@ -1056,9 +1041,7 @@
       };
     }
 
-    // ===== Stopping logic – adaptive with Option D + profiles =====
-
-    // Venlafaxine IR regimen wordings for daily patterns
+    // ========= Venlafaxine IR daily regimen text =========
     const venlafaxineIrRegimens = {
       "37.5": "Take 37.5 mg once daily.",
       "75": "Take 37.5 mg twice daily.",
@@ -1072,16 +1055,12 @@
       "375": "Take 150 mg in the morning, 75 mg at midday and 150 mg in the evening (total 375 mg per day)."
     };
 
-    // Describe dose + frequency for patient SMS
     function describeDoseForPatient(drug, dose, pattern) {
       pattern = pattern || "daily";
-
       if (dose === 0) {
         return `Do not take ${drug.name} this week (you have stopped).`;
       }
-
       const key = String(dose);
-
       if (pattern === "daily") {
         if (drug.id === "venlafaxine_ir" && venlafaxineIrRegimens[key]) {
           return venlafaxineIrRegimens[key];
@@ -1094,31 +1073,25 @@
       } else if (pattern === "weekly") {
         return `Take ${dose} mg of ${drug.name} once this week (for example on the same day each week).`;
       }
-
       return `Take ${dose} mg of ${drug.name} once daily.`;
     }
 
-    // Compute base taper steps (Option D adaptive)
+    // ========= Stopping taper logic (Option D + fast short) =========
     function computeBaseTaperSteps(drug, startDose, durationBand) {
       const minDose = Math.min(...drug.dailyDoses);
       const isLowestDose = startDose === minDose;
 
-      // Duration-based text
-      const highRisk = (drug.withdrawalRisk === "high" || drug.withdrawalRisk === "very_high");
-
-      // Lowest dose case – use frequency-based taper
+      // Lowest-dose branch – use frequency taper
       if (isLowestDose) {
         const steps = [];
+        const highRisk = (drug.withdrawalRisk === "high" || drug.withdrawalRisk === "very_high");
 
-        // Very simplified rules for lowest-dose SSRIs/others
         if (durationBand === "short" && drug.halfLife === "long" && !highRisk) {
-          // Very short use, long half-life, low risk (e.g. fluoxetine)
           steps.push({ dose: 0, pattern: "daily" });
           return steps;
         }
 
         if (durationBand === "short" && !highRisk) {
-          // Short use, moderate risk: alternate days then stop
           steps.push({ dose: startDose, pattern: "alt_day" });
           steps.push({ dose: 0, pattern: "daily" });
           return steps;
@@ -1131,7 +1104,6 @@
           return steps;
         }
 
-        // Longer duration or higher risk – add weekly step
         steps.push({ dose: startDose, pattern: "alt_day" });
         steps.push({ dose: startDose, pattern: "every_3_days" });
         steps.push({ dose: startDose, pattern: "weekly" });
@@ -1139,64 +1111,65 @@
         return steps;
       }
 
-      // Not at lowest dose – dose level taper
-      const levels = drug.dailyDoses.filter(d => d <= startDose).sort((a, b) => b - a);
-      const idx = levels.indexOf(startDose);
-      const lowerLevels = (idx >= 0) ? levels.slice(idx + 1) : levels.slice(1);
+      // Not at lowest dose – build discrete ladder
+      const allLevelsAsc = [...drug.dailyDoses]
+        .filter(d => d <= startDose)
+        .sort((a, b) => a - b);
+      const allLevelsDesc = [...allLevelsAsc].sort((a, b) => b - a);
 
-      if (!lowerLevels.length) {
-        // Fallback to lowest-dose logic if for some reason we have no lower levels.
+      // Remove starting dose from ladder (no "week 1: same")
+      const nonZeroLevelsDesc = allLevelsDesc.filter(d => d < startDose);
+      if (!nonZeroLevelsDesc.length) {
+        // fallback to lowest-dose logic if something odd
         return computeBaseTaperSteps(drug, minDose, durationBand);
       }
 
-      // Decide how many dose steps we want (excluding zero)
-      let baseByDuration;
-      switch (durationBand) {
-        case "short": baseByDuration = 1; break;
-        case "medium": baseByDuration = 2; break;
-        case "long": baseByDuration = 3; break;
-        case "very_long": baseByDuration = 4; break;
-        default: baseByDuration = 2;
-      }
+      // SHORT duration: fast halving taper (Option 3)
+      if (durationBand === "short") {
+        const used = [];
+        let current = startDose;
 
-      if (drug.withdrawalRisk === "high") baseByDuration += 1;
-      if (drug.withdrawalRisk === "very_high") baseByDuration += 2;
-      if (drug.halfLife === "long") baseByDuration -= 1;
+        while (current > minDose) {
+          const target = current / 2;
+          const candidates = nonZeroLevelsDesc.filter(d => d < current);
+          if (!candidates.length) break;
 
-      let targetSteps = Math.max(1, Math.min(baseByDuration, lowerLevels.length));
+          let best = candidates[0];
+          let bestDiff = Math.abs(best - target);
+          candidates.forEach(d => {
+            const diff = Math.abs(d - target);
+            if (diff < bestDiff) {
+              best = d;
+              bestDiff = diff;
+            }
+          });
 
-      let doseSteps;
-      if (lowerLevels.length <= targetSteps) {
-        doseSteps = lowerLevels;
-      } else {
-        // Evenly spread choices across lowerLevels
-        const chosen = [];
-        for (let i = 0; i < targetSteps; i++) {
-          const idx = Math.round((i * (lowerLevels.length - 1)) / (targetSteps - 1));
-          const val = lowerLevels[idx];
-          if (!chosen.includes(val)) {
-            chosen.push(val);
-          }
+          if (used.includes(best)) break;
+          used.push(best);
+          current = best;
         }
-        // Ensure we always include the lowest level
-        const lowest = lowerLevels[lowerLevels.length - 1];
-        if (!chosen.includes(lowest)) chosen.push(lowest);
-        doseSteps = chosen.sort((a, b) => b - a);
+
+        if (!used.includes(minDose)) {
+          used.push(minDose);
+        }
+
+        const steps = used
+          .sort((a, b) => b - a)
+          .map(d => ({ dose: d, pattern: "daily" }));
+        steps.push({ dose: 0, pattern: "daily" });
+        return steps;
       }
 
-      const steps = doseSteps.map(d => ({ dose: d, pattern: "daily" }));
+      // MEDIUM / LONG / VERY_LONG – use full ladder (minus start) then zero
+      const fullNonZeroAsc = nonZeroLevelsDesc.slice().sort((a, b) => a - b);
+      const steps = fullNonZeroAsc.map(d => ({ dose: d, pattern: "daily" }));
       steps.push({ dose: 0, pattern: "daily" });
-
       return steps;
     }
 
-    // Apply taper profile (standard / extended / slow / micro)
     function applyTaperProfileToSteps(steps, profile) {
       if (!steps || !steps.length) return [];
-
-      if (!profile || profile === "standard") {
-        return steps;
-      }
+      if (!profile || profile === "standard") return steps;
 
       const out = [];
       const lastIndex = steps.length - 1;
@@ -1204,31 +1177,21 @@
       if (profile === "extended") {
         steps.forEach((s, i) => {
           if (i === lastIndex) {
-            out.push(s); // single stop week
+            out.push(s);
           } else {
-            out.push(s, s); // each dose step twice
+            out.push(s, s);
           }
         });
         return out;
       }
 
-      if (profile === "slow") {
+      if (profile === "slow" || profile === "micro") {
+        const repeat = profile === "slow" ? 3 : 3;
         steps.forEach((s, i) => {
           if (i === lastIndex) {
             out.push(s);
           } else {
-            out.push(s, s, s); // triple each dose step
-          }
-        });
-        return out;
-      }
-
-      if (profile === "micro") {
-        steps.forEach((s, i) => {
-          if (i === lastIndex) {
-            out.push(s);
-          } else {
-            out.push(s, s, s); // micro = slowest of the provided options
+            for (let j = 0; j < repeat; j++) out.push(s);
           }
         });
         return out;
@@ -1247,7 +1210,7 @@
       }));
     }
 
-    // ===== Tablet / capsule count helpers =====
+    // ========= Tablet/capsule count helpers =========
     function getUnitStrengths(drug) {
       if (Array.isArray(drug.unitStrengths) && drug.unitStrengths.length) {
         return [...drug.unitStrengths].sort((a, b) => b - a);
@@ -1268,21 +1231,20 @@
         let dosesPerWeek;
         switch (w.pattern) {
           case "alt_day":
-            dosesPerWeek = Math.ceil(7 / 2); // ~3.5 -> 4
+            dosesPerWeek = Math.ceil(7 / 2); // round UP
             break;
           case "every_3_days":
-            dosesPerWeek = Math.ceil(7 / 3); // ~2.3 -> 3
+            dosesPerWeek = Math.ceil(7 / 3);
             break;
           case "weekly":
             dosesPerWeek = 1;
             break;
           default:
-            dosesPerWeek = 7; // daily
+            dosesPerWeek = 7;
         }
 
         if (dosesPerWeek <= 0) return;
 
-        // Decompose a single dose into strengths (no splitting)
         let remaining = dose;
         const perDoseCounts = {};
 
@@ -1392,7 +1354,7 @@
       return text;
     }
 
-    // ===== Stopping plan – clinician + patient + tablet helper =====
+    // ========= Stopping plan – text generation =========
     function generateStopPlan(drugId, dose, durationBand, profile) {
       profile = profile || "standard";
       const drug = getDrugById(drugId);
@@ -1411,7 +1373,6 @@
       };
       const durationText = durationTextMap[durationBand] || "unspecified";
 
-      // Clinician – week-by-week dose + frequency
       const clinicianLines = weeks.map(w => {
         if (w.dose === 0) {
           return `Week ${w.week}: stop ${drug.name} – no dose (if stable and withdrawal symptoms are manageable).`;
@@ -1429,13 +1390,12 @@
         `Plan – gradual reduction of ${drug.name} ${startDose} mg/day (duration of use: ${durationText}, profile: ${profile})\n\n` +
         clinicianLines.map(l => `• ${l}`).join("\n") +
         `\n\nRationale & counselling:\n` +
-        `• Uses discrete total daily doses and/or reduced frequency dosing achievable with UK BNF tablet/capsule strengths (no unachievable doses).\n` +
+        `• Uses discrete total daily doses and/or reduced frequency dosing achievable with UK BNF strengths (no unachievable doses).\n` +
         `• Number and spacing of steps adjusted for withdrawal risk, duration of treatment and chosen taper profile.\n` +
-        `• Advised patient about withdrawal symptoms (dizziness, "electric shocks", flu-like symptoms, sleep disturbance, anxiety, low mood) and difference from relapse.\n` +
+        `• Advised about withdrawal symptoms (dizziness, "electric shocks", flu-like symptoms, sleep disturbance, anxiety, low mood) and difference from relapse.\n` +
         `• Advised to contact the surgery if withdrawal is severe/persistent or if depressive symptoms return; consider pausing or slowing taper.\n` +
         `• Documented crisis/safety netting (self-harm, suicidal ideation) and agreed review plan.\n`;
 
-      // Patient SMS – week by week
       const smsLines = weeks.map(w => {
         if (w.dose === 0) {
           return `Week ${w.week}: Do not take ${drug.name}.`;
@@ -1456,7 +1416,7 @@
       return { clinician: clinicianText, sms: smsText, tablets: tabletsText };
     }
 
-    // ===== Weekly cross-taper plan for patient SMS + tablet counts =====
+    // ========= Weekly cross-taper plan for switching =========
     function buildWeeklyCrossTaperPlan(from, fromDose, to) {
       const startDose = Number(fromDose);
       const band = (from.withdrawalRisk === "very_high" || from.withdrawalRisk === "high") ? "long" : "medium";
@@ -1468,21 +1428,18 @@
         return { weekPlan: [], smsText: "" };
       }
 
-      // Determine last week where from-drug dose > 0
       let indexStopFrom = -1;
       for (let i = 0; i < weeks.length; i++) {
         if (weeks[i].dose > 0) indexStopFrom = i;
       }
 
       const toStartDose = to.dailyDoses[0];
-      const toTargetDose =
-        to.dailyDoses[Math.min(1, to.dailyDoses.length - 1)] || toStartDose;
+      const toTargetDose = to.dailyDoses[Math.min(1, to.dailyDoses.length - 1)] || toStartDose;
 
       const weekPlan = [];
       for (let i = 0; i < weeks.length; i++) {
         const w = weeks[i];
         let toDose;
-
         if (i === 0) {
           toDose = toStartDose;
         } else {
@@ -1492,7 +1449,6 @@
             toDose = toTargetDose;
           }
         }
-
         weekPlan.push({
           week: w.week,
           fromDose: w.dose,
@@ -1500,7 +1456,6 @@
         });
       }
 
-      // Build patient SMS using this weekPlan
       const lines = [];
       for (let i = 0; i < weekPlan.length; i++) {
         const w = weekPlan[i];
@@ -1508,14 +1463,12 @@
 
         const parts = [];
 
-        // From-drug text
         if (w.fromDose > 0) {
           parts.push(describeDoseForPatient(from, w.fromDose, "daily"));
         } else if (prev && prev.fromDose > 0) {
           parts.push(`Stop ${from.name}.`);
         }
 
-        // To-drug text
         if (w.toDose > 0) {
           let action;
           if (!prev || (prev && !prev.toDose)) {
@@ -1546,7 +1499,7 @@
       return { weekPlan, smsText };
     }
 
-    // ===== Switching plan – clinician + patient + tablet helper =====
+    // ========= Switching plan – text generation =========
     function generateSwitchPlan(fromDrugId, fromDose, toDrugId) {
       const from = getDrugById(fromDrugId);
       const to = getDrugById(toDrugId);
@@ -1558,7 +1511,6 @@
 
       const strategy = getSwitchStrategy(from, to, dose);
 
-      // Unsupported / specialist cases
       if (strategy.mode === "unsupported") {
         const clinicianText =
           `Switch from ${from.name} ${dose} mg/day to ${to.name}\n\n` +
@@ -1582,7 +1534,6 @@
       const scheduleLines = [];
       const doseTextFrom = `${from.name} ${dose} mg once daily`;
 
-      // High-level schedule for clinicians (summary)
       switch (strategy.mode) {
         case "direct":
           scheduleLines.push(
@@ -1643,7 +1594,6 @@
         standardCautions.map(c => `• ${c}`).join("\n") +
         `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies; check detailed SPS tables for this specific pair.`;
 
-      // ---- Patient SMS + tablet helper ----
       let smsText = "";
       let tabletsText = "";
       let weekPlanForCounts = null;
@@ -1660,7 +1610,6 @@
             "Tablet / capsule count helper could not generate quantities for this cross-taper. Please check doses and calculate manually.";
         }
       } else if (strategy.mode === "direct" || strategy.mode === "taper_stop_start" || strategy.mode === "same_drug") {
-        // Simpler SMS without full week-by-week cross-taper
         smsText =
           `Your medication plan\n\n` +
           `You are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n`;
@@ -1695,7 +1644,7 @@
       return { clinician: clinicianText, sms: smsText, tablets: tabletsText };
     }
 
-    // ===== Taper pathway chooser (modal) =====
+    // ========= Taper pathway chooser (modal) =========
     function getTaperOptionsForDrug(drug, startDose, durationBand) {
       const options = [];
 
@@ -1747,7 +1696,6 @@
         });
       }
 
-      // Use stopping logic (standard profile) to give example taper in modal
       options.forEach(opt => {
         const examplePlan = generateStopPlan(opt.taperDrugId, opt.taperStartDose, durationBand, "standard");
         const lines = examplePlan.clinician
@@ -1855,7 +1803,7 @@
       closeTaperModal();
     }
 
-    // ===== Copy to clipboard =====
+    // ========= Copy to clipboard =========
     function copyToClipboard(text) {
       if (!navigator.clipboard) {
         const textarea = document.createElement("textarea");
@@ -1876,7 +1824,7 @@
       });
     }
 
-    // ===== State persistence =====
+    // ========= Local storage =========
     const STORAGE_KEY = "switchStopADState";
 
     function loadState() {
@@ -1899,9 +1847,8 @@
       }
     }
 
-    // ===== Global click handlers =====
+    // ========= Global click handlers =========
     document.addEventListener("click", (e) => {
-      // Copy buttons
       if (e.target.classList.contains("copy-btn")) {
         const targetId = e.target.dataset.target;
         const contentEl = document.getElementById(targetId);
@@ -1921,7 +1868,6 @@
         }, 1500);
       }
 
-      // Modal option selection
       if (e.target.classList.contains("modal-option")) {
         const options = document.querySelectorAll(".modal-option");
         options.forEach(o => o.classList.remove("selected"));
@@ -1930,14 +1876,12 @@
         document.getElementById("taperModalConfirm").disabled = false;
       }
 
-      // Clicking outside the modal (overlay)
       const overlay = document.getElementById("taperModalOverlay");
       if (e.target === overlay) {
         closeTaperModal();
       }
     });
 
-    // Escape key closes modal
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         const overlay = document.getElementById("taperModalOverlay");
@@ -1947,7 +1891,7 @@
       }
     });
 
-    // ===== Main UI wiring =====
+    // ========= Main UI wiring =========
     document.addEventListener("DOMContentLoaded", () => {
       const fromDrugSelect = document.getElementById("fromDrug");
       const fromDoseSelect = document.getElementById("fromDose");
@@ -1973,12 +1917,10 @@
 
       const state = loadState();
 
-      // Populate drug selects
       populateDrugSelect(fromDrugSelect);
       populateDrugSelect(toDrugSelect);
       populateDrugSelect(stopDrugSelect);
 
-      // Restore or set defaults
       if (state.fromDrug && getDrugById(state.fromDrug)) {
         fromDrugSelect.value = state.fromDrug;
       }
@@ -2001,7 +1943,6 @@
         taperProfile = state.taperProfile;
       }
 
-      // Restore active tab
       const initialTab = state.activeTab === "stopping" ? "stopping" : "switching";
       tabButtons.forEach(b => b.classList.remove("active"));
       document.querySelector(`.tab-button[data-tab="${initialTab}"]`).classList.add("active");
@@ -2009,7 +1950,6 @@
         tabs[id].classList.toggle("hidden", id !== initialTab);
       });
 
-      // Taper profile buttons
       const profileButtons = document.querySelectorAll(".taper-profile-button");
       profileButtons.forEach(btn => {
         if (btn.dataset.profile === taperProfile) {
@@ -2024,7 +1964,6 @@
           btn.classList.add("active");
           saveState({ taperProfile });
 
-          // If there is already a chosen drug/dose, regenerate taper immediately
           const drugId = stopDrugSelect.value;
           const dose = stopDoseSelect.value;
           if (drugId && dose) {
@@ -2036,7 +1975,6 @@
         });
       });
 
-      // Select change events
       fromDrugSelect.addEventListener("change", () => {
         populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
         saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
@@ -2063,7 +2001,6 @@
         saveState({ duration: durationSelect.value });
       });
 
-      // Generate switch
       document.getElementById("generateSwitch").addEventListener("click", () => {
         const res = generateSwitchPlan(fromDrugSelect.value, fromDoseSelect.value, toDrugSelect.value);
         document.getElementById("switchClinician").textContent = res.clinician;
@@ -2077,7 +2014,6 @@
         document.getElementById("switchTablets").textContent = "";
       });
 
-      // Generate stop
       document.getElementById("generateStop").addEventListener("click", () => {
         userHasClickedGenerateStop = true;
 
@@ -2114,7 +2050,6 @@
         document.getElementById("stopTablets").textContent = "";
       });
 
-      // Modal buttons
       document.getElementById("taperModalCancel").addEventListener("click", () => {
         closeTaperModal();
       });
@@ -2123,7 +2058,6 @@
         confirmTaperModalChoice();
       });
 
-      // Tab switching
       tabButtons.forEach(btn => {
         btn.addEventListener("click", () => {
           const tabId = btn.dataset.tab;
@@ -2136,7 +2070,6 @@
         });
       });
 
-      // Ensure outputs start empty
       document.getElementById("switchClinician").textContent = "";
       document.getElementById("switchSMS").textContent = "";
       document.getElementById("switchTablets").textContent = "";
