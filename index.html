@@ -1259,27 +1259,54 @@
     const lastIndex = steps.length - 1;
 
     if (profile === "extended") {
-      steps.forEach((s, i) => {
-        if (i === lastIndex) {
-          out.push(s);
-        } else {
-          out.push(s, s);
-        }
-      });
-      return out;
-    }
+  const last = steps[steps.length - 1];
+  const lastDose = last.dose;
 
-    if (profile === "slow") {
-      const repeat = 3;
-      steps.forEach((s, i) => {
-        if (i === lastIndex) {
-          out.push(s);
-        } else {
-          for (let j = 0; j < repeat; j++) out.push(s);
-        }
-      });
-      return out;
+  const expanded = [];
+  // Repeat each non-zero step twice
+  steps.forEach((s, i) => {
+    if (s.dose === 0) {
+      expanded.push(s);
+    } else {
+      expanded.push(s, s);
     }
+  });
+
+  // Add reduced-frequency tail
+  if (lastDose > 0) {
+    expanded.push({ dose: lastDose, pattern: "alt_day" });
+    expanded.push({ dose: lastDose, pattern: "every_3_days" });
+    expanded.push({ dose: 0, pattern: "daily" });
+  }
+
+  return expanded;
+}
+
+
+if (profile === "slow") {
+  const last = steps[steps.length - 1];
+  const lastDose = last.dose;
+
+  const expanded = [];
+  // Repeat each dose 3 times except zero
+  steps.forEach((s, i) => {
+    if (i === steps.length - 1) {
+      expanded.push(s);
+    } else {
+      expanded.push(s, s, s);
+    }
+  });
+
+  // Add reduced-frequency tail once at the final non-zero dose
+  if (lastDose > 0) {
+    expanded.push({ dose: lastDose, pattern: "alt_day" });
+    expanded.push({ dose: lastDose, pattern: "every_3_days" });
+    expanded.push({ dose: 0, pattern: "daily" });
+  }
+
+  return expanded;
+}
+
 
     return steps;
   }
@@ -2159,3 +2186,4 @@
 </script>
 </body>
 </html>
+
