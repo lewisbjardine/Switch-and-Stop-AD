@@ -79,14 +79,6 @@
       NICE CKS Depression – switching antidepressants; SPS suite “Switching strategies for antidepressants”
       (including SSRIs, SNRIs, TCAs, MAOIs); Psychiatrienet switch table.
     </p>
-    <p class="disclaimer">
-      Links:
-      <a class="guideline-link" href="https://www.nice.org.uk/guidance/ng222" target="_blank">NICE NG222</a> ·
-      <a class="guideline-link" href="https://www.sps.nhs.uk/articles/switching-strategies-for-antidepressants/" target="_blank">SPS switching strategies</a> ·
-      <a class="guideline-link" href="https://www.sps.nhs.uk/articles/ssris-to-other-antidepressants-switching-in-adults/" target="_blank">SPS SSRIs to other antidepressants</a> ·
-      <a class="guideline-link" href="https://www.sps.nhs.uk/articles/snris-to-other-antidepressants-switching-in-adults/" target="_blank">SPS SNRIs to other antidepressants</a> ·
-      <a class="guideline-link" href="https://www.psychiatrienet.nl/switchtabel/show?id=SwitchAntidepressants" target="_blank">Psychiatrienet switch table</a>
-    </p>
   </section>
 
   <!-- STOPPING TAB -->
@@ -150,14 +142,7 @@
 
     <p class="disclaimer">
       Sources (accessed 2025): NICE NG222 &amp; QS8 “Stopping antidepressants”; RCPsych “Stopping antidepressants”;
-      SPS “Deprescribing of antidepressants for depression and anxiety”; proportional tapering literature (e.g. Horowitz &amp; Taylor).
-    </p>
-    <p class="disclaimer">
-      Links:
-      <a class="guideline-link" href="https://www.nice.org.uk/guidance/ng222/chapter/Recommendations#stopping-antidepressant-medication" target="_blank">NICE NG222 stopping section</a> ·
-      <a class="guideline-link" href="https://www.nice.org.uk/guidance/qs8/chapter/Quality-statement-4-Stopping-antidepressants" target="_blank">NICE QS8</a> ·
-      <a class="guideline-link" href="https://www.rcpsych.ac.uk/mental-health/treatments-and-wellbeing/stopping-antidepressants" target="_blank">RCPsych – Stopping antidepressants</a> ·
-      <a class="guideline-link" href="https://www.sps.nhs.uk/articles/deprescribing-of-antidepressants-for-depression-and-anxiety/" target="_blank">SPS deprescribing</a>
+      SPS “Deprescribing of antidepressants for depression and anxiety”; proportional tapering literature.
     </p>
   </section>
 
@@ -194,16 +179,17 @@
 </div>
 
 <script>
-  // ========= Global state =========
+  // ========= Global state & constants =========
   let userHasClickedGenerateStop = false;
   let taperProfile = "standard";
   let pendingTaperContext = null;
   let pendingTaperOptions = [];
   let selectedTaperOptionId = null;
   let lastFocusedElementBeforeModal = null;
-  let showAllAntidepressants = false; // collapsed by default
 
+  let showAllAntidepressants = false; // collapsed by default
   const SHOW_ALL_VALUE = "__SHOW_ALL__";
+  const HIDE_EXTRA_VALUE = "__HIDE_EXTRA__";
 
   // ========= Antidepressant dataset =========
   const antidepressants = [
@@ -616,8 +602,8 @@
     return sortedAntidepressants.find(d => d.id === id);
   }
 
-  // Populate drug lists with collapsed/expanded behaviour
-  function populateDrugSelect(selectEl, showAll, preferredValue, includeShowAllOption) {
+  // ========= Populate dropdowns with expand/collapse meta-option =========
+  function populateDrugSelect(selectEl, showAll, preferredValue, includeMetaOption) {
     selectEl.innerHTML = "";
     const baseList = showAll
       ? sortedAntidepressants
@@ -638,25 +624,27 @@
       selectEl.appendChild(opt);
     });
 
-    // Add in-dropdown "Show all antidepressants…" option when collapsed
-    if (!showAll && includeShowAllOption) {
-  const showAllOpt = document.createElement("option");
-  showAllOpt.value = SHOW_ALL_VALUE;
-  showAllOpt.textContent = "Show all antidepressants…";
-  showAllOpt.setAttribute("data-meta-option", "true");
-  selectEl.appendChild(showAllOpt);
-} else if (showAll && includeShowAllOption) {
-  const hideOpt = document.createElement("option");
-  hideOpt.value = "__HIDE__";
-  hideOpt.textContent = "Hide extra antidepressants";
-  hideOpt.setAttribute("data-meta-option", "true");
-  selectEl.appendChild(hideOpt);
-}
-
+    // Meta options at the bottom
+    if (includeMetaOption) {
+      if (!showAll) {
+        const showOpt = document.createElement("option");
+        showOpt.value = SHOW_ALL_VALUE;
+        showOpt.textContent = "Show all antidepressants…";
+        showOpt.setAttribute("data-meta-option", "true");
+        selectEl.appendChild(showOpt);
+      } else {
+        const hideOpt = document.createElement("option");
+        hideOpt.value = HIDE_EXTRA_VALUE;
+        hideOpt.textContent = "Hide extra antidepressants";
+        hideOpt.setAttribute("data-meta-option", "true");
+        selectEl.appendChild(hideOpt);
+      }
+    }
 
     if (
       preferredValue &&
       preferredValue !== SHOW_ALL_VALUE &&
+      preferredValue !== HIDE_EXTRA_VALUE &&
       [...selectEl.options].some(o => o.value === preferredValue)
     ) {
       selectEl.value = preferredValue;
@@ -981,7 +969,7 @@
     return steps;
   }
 
-  // === apply taper profiles with tails only for EXTENDED/SLOW (A1) ===
+  // === apply taper profiles with tails only for EXTENDED/SLOW ===
   function applyTaperProfileToSteps(steps, profile) {
     if (!steps || !steps.length) return [];
     if (!profile || profile === "standard") return steps;
@@ -1655,7 +1643,7 @@
     }
   }
 
-  // ========= Global click handlers =========
+  // ========= Global click handlers (copy buttons, modal selection, overlay) =========
   document.addEventListener("click", (e) => {
     if (e.target.classList.contains("copy-btn")) {
       const targetId = e.target.dataset.target;
@@ -1727,18 +1715,24 @@
     const state = loadState();
     showAllAntidepressants = !!state.showAllAntidepressants;
 
-    // Helper: once expanded, repopulate all three selects
+    // Helpers to expand/collapse and repopulate all dropdowns
     function expandAllAntidepressantsAndRepopulate() {
       showAllAntidepressants = true;
       saveState({ showAllAntidepressants: true });
 
-      const prevFrom = fromDrugSelect.value === SHOW_ALL_VALUE ? null : fromDrugSelect.value;
-      const prevTo = toDrugSelect.value === SHOW_ALL_VALUE ? null : toDrugSelect.value;
-      const prevStop = stopDrugSelect.value === SHOW_ALL_VALUE ? null : stopDrugSelect.value;
+      const prevFrom = (fromDrugSelect.value === SHOW_ALL_VALUE || fromDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : fromDrugSelect.value;
+      const prevTo = (toDrugSelect.value === SHOW_ALL_VALUE || toDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : toDrugSelect.value;
+      const prevStop = (stopDrugSelect.value === SHOW_ALL_VALUE || stopDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : stopDrugSelect.value;
 
-      populateDrugSelect(fromDrugSelect, true, prevFrom, false);
-      populateDrugSelect(toDrugSelect, true, prevTo, false);
-      populateDrugSelect(stopDrugSelect, true, prevStop, false);
+      populateDrugSelect(fromDrugSelect, true, prevFrom, true);
+      populateDrugSelect(toDrugSelect, true, prevTo, true);
+      populateDrugSelect(stopDrugSelect, true, prevStop, true);
 
       const prevFromDose = fromDoseSelect.value;
       const prevToDose = toDrugDoseSelect.value;
@@ -1749,7 +1743,30 @@
       populateDoseSelect(stopDrugSelect.value, stopDoseSelect, prevStopDose);
     }
 
-    // Initial population of selects
+    function collapseAntidepressantsAndRepopulate() {
+      showAllAntidepressants = false;
+      saveState({ showAllAntidepressants: false });
+
+      const prevFrom = (fromDrugSelect.value === SHOW_ALL_VALUE || fromDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : fromDrugSelect.value;
+      const prevTo = (toDrugSelect.value === SHOW_ALL_VALUE || toDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : toDrugSelect.value;
+      const prevStop = (stopDrugSelect.value === SHOW_ALL_VALUE || stopDrugSelect.value === HIDE_EXTRA_VALUE)
+        ? null
+        : stopDrugSelect.value;
+
+      populateDrugSelect(fromDrugSelect, false, prevFrom, true);
+      populateDrugSelect(toDrugSelect, false, prevTo, true);
+      populateDrugSelect(stopDrugSelect, false, prevStop, true);
+
+      populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
+      populateToDrugDose(toDrugSelect.value, toDrugDoseSelect);
+      populateDoseSelect(stopDrugSelect.value, stopDoseSelect);
+    }
+
+    // Initial population
     populateDrugSelect(
       fromDrugSelect,
       showAllAntidepressants,
@@ -1815,61 +1832,53 @@
       });
     });
 
-fromDrugSelect.addEventListener("change", () => {
-  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
-    expandAllAntidepressantsAndRepopulate();
-    return;
-  }
-
-  if (fromDrugSelect.value === "__HIDE__") {
-    collapseAntidepressantsAndRepopulate();
-    return;
-  }
-
-  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
-  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
-});
-
+    // Dropdown change handlers (with expand/hide behaviour)
+    fromDrugSelect.addEventListener("change", () => {
+      if (fromDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
+      if (fromDrugSelect.value === HIDE_EXTRA_VALUE) {
+        collapseAntidepressantsAndRepopulate();
+        return;
+      }
+      populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
+      saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
+    });
 
     fromDoseSelect.addEventListener("change", () => {
       saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
     });
 
-    fromDrugSelect.addEventListener("change", () => {
-  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
-    expandAllAntidepressantsAndRepopulate();
-    return;
-  }
-
-  if (fromDrugSelect.value === "__HIDE__") {
-    collapseAntidepressantsAndRepopulate();
-    return;
-  }
-
-  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
-  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
-});
-
+    toDrugSelect.addEventListener("change", () => {
+      if (toDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
+      if (toDrugSelect.value === HIDE_EXTRA_VALUE) {
+        collapseAntidepressantsAndRepopulate();
+        return;
+      }
+      populateToDrugDose(toDrugSelect.value, toDrugDoseSelect);
+      saveState({ toDrug: toDrugSelect.value, toDrugDose: toDrugDoseSelect.value });
+    });
 
     toDrugDoseSelect.addEventListener("change", () => {
       saveState({ toDrug: toDrugSelect.value, toDrugDose: toDrugDoseSelect.value });
     });
 
- fromDrugSelect.addEventListener("change", () => {
-  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
-    expandAllAntidepressantsAndRepopulate();
-    return;
-  }
-
-  if (fromDrugSelect.value === "__HIDE__") {
-    collapseAntidepressantsAndRepopulate();
-    return;
-  }
-
-  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
-  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
-});
-
+    stopDrugSelect.addEventListener("change", () => {
+      if (stopDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
+      if (stopDrugSelect.value === HIDE_EXTRA_VALUE) {
+        collapseAntidepressantsAndRepopulate();
+        return;
+      }
+      populateDoseSelect(stopDrugSelect.value, stopDoseSelect);
+      saveState({ stopDrug: stopDrugSelect.value, stopDose: stopDoseSelect.value });
+    });
 
     stopDoseSelect.addEventListener("change", () => {
       saveState({ stopDrug: stopDrugSelect.value, stopDose: stopDoseSelect.value });
@@ -1953,7 +1962,20 @@ fromDrugSelect.addEventListener("change", () => {
       });
     });
 
-    // Clear any residual text on load
+    // Click-away behaviour: collapse back to top 10 when clicking outside any of the selects
+    document.addEventListener("click", (ev) => {
+      const target = ev.target;
+      const insideDropdown =
+        target.closest("#fromDrug") ||
+        target.closest("#toDrug") ||
+        target.closest("#stopDrug");
+
+      if (!insideDropdown && showAllAntidepressants) {
+        collapseAntidepressantsAndRepopulate();
+      }
+    });
+
+    // Clear outputs on initial load
     document.getElementById("switchClinician").textContent = "";
     document.getElementById("switchSMS").textContent = "";
     document.getElementById("switchTablets").textContent = "";
@@ -1964,5 +1986,3 @@ fromDrugSelect.addEventListener("change", () => {
 </script>
 </body>
 </html>
-
-
