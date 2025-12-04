@@ -1815,40 +1815,61 @@
       });
     });
 
-    fromDrugSelect.addEventListener("change", () => {
-      if (fromDrugSelect.value === SHOW_ALL_VALUE) {
-        expandAllAntidepressantsAndRepopulate();
-        return;
-      }
-      populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
-      saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
-    });
+fromDrugSelect.addEventListener("change", () => {
+  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
+    expandAllAntidepressantsAndRepopulate();
+    return;
+  }
+
+  if (fromDrugSelect.value === "__HIDE__") {
+    collapseAntidepressantsAndRepopulate();
+    return;
+  }
+
+  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
+  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
+});
+
 
     fromDoseSelect.addEventListener("change", () => {
       saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
     });
 
-    toDrugSelect.addEventListener("change", () => {
-      if (toDrugSelect.value === SHOW_ALL_VALUE) {
-        expandAllAntidepressantsAndRepopulate();
-        return;
-      }
-      populateToDrugDose(toDrugSelect.value, toDrugDoseSelect);
-      saveState({ toDrug: toDrugSelect.value, toDrugDose: toDrugDoseSelect.value });
-    });
+    fromDrugSelect.addEventListener("change", () => {
+  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
+    expandAllAntidepressantsAndRepopulate();
+    return;
+  }
+
+  if (fromDrugSelect.value === "__HIDE__") {
+    collapseAntidepressantsAndRepopulate();
+    return;
+  }
+
+  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
+  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
+});
+
 
     toDrugDoseSelect.addEventListener("change", () => {
       saveState({ toDrug: toDrugSelect.value, toDrugDose: toDrugDoseSelect.value });
     });
 
-    stopDrugSelect.addEventListener("change", () => {
-      if (stopDrugSelect.value === SHOW_ALL_VALUE) {
-        expandAllAntidepressantsAndRepopulate();
-        return;
-      }
-      populateDoseSelect(stopDrugSelect.value, stopDoseSelect);
-      saveState({ stopDrug: stopDrugSelect.value, stopDose: stopDoseSelect.value });
-    });
+ fromDrugSelect.addEventListener("change", () => {
+  if (fromDrugSelect.value === SHOW_ALL_VALUE) {
+    expandAllAntidepressantsAndRepopulate();
+    return;
+  }
+
+  if (fromDrugSelect.value === "__HIDE__") {
+    collapseAntidepressantsAndRepopulate();
+    return;
+  }
+
+  populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
+  saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
+});
+
 
     stopDoseSelect.addEventListener("change", () => {
       saveState({ stopDrug: stopDrugSelect.value, stopDose: stopDoseSelect.value });
@@ -1943,4 +1964,5 @@
 </script>
 </body>
 </html>
+
 
