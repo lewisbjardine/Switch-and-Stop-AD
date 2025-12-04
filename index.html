@@ -156,7 +156,7 @@
       font-size: 0.9rem;
       white-space: pre-wrap;
       word-wrap: break-word;
-      min-height: 180px;
+      min-height: 120px;
       clear: both;
     }
 
@@ -348,6 +348,12 @@
           <div class="output-label">Clinician note (SystmOne/EMIS)</div>
           <button class="copy-btn" data-target="switchClinician">Copy</button>
           <div id="switchClinician" class="output-box"></div>
+
+          <div style="margin-top:0.75rem;">
+            <div class="output-label">Tablet / capsule count helper (for prescribing)</div>
+            <button class="copy-btn" data-target="switchTablets">Copy</button>
+            <div id="switchTablets" class="output-box"></div>
+          </div>
         </div>
         <div>
           <div class="output-label">Patient SMS version</div>
@@ -410,6 +416,12 @@
           <div class="output-label">Clinician note (SystmOne/EMIS)</div>
           <button class="copy-btn" data-target="stopClinician">Copy</button>
           <div id="stopClinician" class="output-box"></div>
+
+          <div style="margin-top:0.75rem;">
+            <div class="output-label">Tablet / capsule count helper (for prescribing)</div>
+            <button class="copy-btn" data-target="stopTablets">Copy</button>
+            <div id="stopTablets" class="output-box"></div>
+          </div>
         </div>
         <div>
           <div class="output-label">Patient SMS version</div>
@@ -471,7 +483,7 @@
     let selectedTaperOptionId = null;
     let lastFocusedElementBeforeModal = null;
 
-    // ===== Antidepressant dataset (total daily doses) =====
+    // ===== Antidepressant dataset (total daily doses + unit strengths) =====
     const antidepressants = [
       // SSRIs
       {
@@ -482,7 +494,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [100, 50, 25] // tablets
       },
       {
         id: "fluoxetine",
@@ -492,7 +505,8 @@
         halfLife: "long",
         withdrawalRisk: "low",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [60, 20, 10] // capsules
       },
       {
         id: "citalopram",
@@ -502,7 +516,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [40, 20, 10]
       },
       {
         id: "escitalopram",
@@ -512,7 +527,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [20, 10, 5]
       },
       {
         id: "paroxetine",
@@ -522,7 +538,8 @@
         halfLife: "short",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [40, 30, 20, 10]
       },
       {
         id: "fluvoxamine",
@@ -532,7 +549,8 @@
         halfLife: "short",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [100, 50]
       },
 
       // SNRIs
@@ -540,23 +558,23 @@
         id: "venlafaxine_ir",
         name: "Venlafaxine IR (immediate-release)",
         class: "SNRI",
-        // total daily doses (multiple of 37.5 mg) up to 375 mg/day
         dailyDoses: [37.5, 75, 112.5, 150, 187.5, 225, 262.5, 300, 337.5, 375],
         halfLife: "short",
         withdrawalRisk: "very_high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [150, 75, 37.5] // tablets
       },
       {
         id: "venlafaxine_mr",
         name: "Venlafaxine MR / XL (modified-release)",
         class: "SNRI",
-        // MR typically 75–225, but allow up to 300/375 using multiple capsules
         dailyDoses: [75, 150, 225, 300, 375],
         halfLife: "short",
         withdrawalRisk: "very_high",
         ukLicensed: true,
-        requiresSwitchForTaper: true
+        requiresSwitchForTaper: true,
+        unitStrengths: [150, 75, 37.5] // MR capsules
       },
       {
         id: "duloxetine",
@@ -566,7 +584,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: true
+        requiresSwitchForTaper: true,
+        unitStrengths: [60, 30] // capsules
       },
 
       // NaSSA / atypical
@@ -578,7 +597,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [45, 30, 15]
       },
       {
         id: "vortioxetine",
@@ -588,7 +608,8 @@
         halfLife: "long",
         withdrawalRisk: "low",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [20, 10, 5]
       },
       {
         id: "agomelatine",
@@ -598,7 +619,8 @@
         halfLife: "short",
         withdrawalRisk: "low",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [25]
       },
       {
         id: "trazodone",
@@ -608,7 +630,8 @@
         halfLife: "short",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [150, 100, 50]
       },
       {
         id: "bupropion",
@@ -618,7 +641,8 @@
         halfLife: "medium",
         withdrawalRisk: "low",
         ukLicensed: false,
-        requiresSwitchForTaper: true
+        requiresSwitchForTaper: true,
+        unitStrengths: [150]
       },
 
       // TCAs and related
@@ -630,7 +654,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [50, 25, 10]
       },
       {
         id: "clomipramine",
@@ -640,7 +665,8 @@
         halfLife: "medium",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [50, 25, 10]
       },
       {
         id: "dosulepin",
@@ -650,7 +676,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [75, 25]
       },
       {
         id: "doxepin",
@@ -660,7 +687,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [75, 25]
       },
       {
         id: "imipramine",
@@ -670,7 +698,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [50, 25, 10]
       },
       {
         id: "lofepramine",
@@ -680,7 +709,8 @@
         halfLife: "medium",
         withdrawalRisk: "medium",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [70]
       },
       {
         id: "maprotiline",
@@ -690,7 +720,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [75, 25]
       },
       {
         id: "mianserin",
@@ -700,7 +731,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [30]
       },
       {
         id: "nortriptyline",
@@ -710,7 +742,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [50, 25, 10]
       },
       {
         id: "trimipramine",
@@ -720,7 +753,8 @@
         halfLife: "long",
         withdrawalRisk: "high",
         ukLicensed: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [50, 25]
       },
 
       // MAOIs – specialist only
@@ -734,7 +768,8 @@
         ukLicensed: true,
         specialistOnly: true,
         noAutoSwitch: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [15]
       },
       {
         id: "tranylcypromine",
@@ -746,7 +781,8 @@
         ukLicensed: true,
         specialistOnly: true,
         noAutoSwitch: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [10]
       },
       {
         id: "isocarboxazid",
@@ -758,7 +794,8 @@
         ukLicensed: true,
         specialistOnly: true,
         noAutoSwitch: true,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [10]
       },
       {
         id: "moclobemide",
@@ -770,7 +807,8 @@
         ukLicensed: true,
         specialistOnly: true,
         noAutoSwitch: false,
-        requiresSwitchForTaper: false
+        requiresSwitchForTaper: false,
+        unitStrengths: [300, 150]
       }
     ];
 
@@ -1044,17 +1082,17 @@
       return { weeks, weeksPerStep };
     }
 
-    // Patient wording for taper doses
+    // Patient wording for taper doses (no tablet splitting)
     const venlafaxineIrRegimens = {
       "37.5": "Take 37.5 mg once daily.",
       "75": "Take 37.5 mg twice daily.",
-      "112.5": "Take 37.5 mg three times daily.",
+      "112.5": "Take 37.5 mg three times daily (total 112.5 mg per day).",
       "150": "Take 75 mg twice daily.",
-      "187.5": "Take 75 mg in the morning and 112.5 mg in the evening (total 187.5 mg per day).",
+      "187.5": "Take 150 mg in the morning and 37.5 mg in the evening (total 187.5 mg per day).",
       "225": "Take 75 mg three times daily.",
-      "262.5": "Take 87.5 mg three times daily (total 262.5 mg per day).",
+      "262.5": "Take 75 mg in the morning, 75 mg at midday and 112.5 mg in the evening (75 mg + 37.5 mg; total 262.5 mg per day).",
       "300": "Take 150 mg twice daily.",
-      "337.5": "Take about 112.5 mg three times daily (total 337.5 mg per day).",
+      "337.5": "Take 150 mg in the morning, 150 mg at midday and 37.5 mg in the evening (total 337.5 mg per day).",
       "375": "Take 150 mg in the morning, 75 mg at midday and 150 mg in the evening (total 375 mg per day)."
     };
 
@@ -1071,11 +1109,130 @@
       return `Take ${dose} mg of ${drug.name} once daily.`;
     }
 
+    // ===== Tablet / capsule count helpers =====
+    function getUnitStrengths(drug) {
+      if (Array.isArray(drug.unitStrengths) && drug.unitStrengths.length) {
+        return [...drug.unitStrengths].sort((a, b) => b - a);
+      }
+      const minDose = Math.min(...drug.dailyDoses);
+      return [minDose];
+    }
+
+    function accumulateTabletCountsForDrug(drug, weeksArray) {
+      const strengths = getUnitStrengths(drug);
+      const totals = {};
+      let approximate = false;
+
+      weeksArray.forEach(w => {
+        const dailyDose = w.dose;
+        if (!dailyDose || dailyDose <= 0) return;
+
+        let remaining = dailyDose;
+        const perDayCounts = {};
+
+        strengths.forEach(str => {
+          const n = Math.floor(remaining / str);
+          if (n > 0) {
+            perDayCounts[str] = (perDayCounts[str] || 0) + n;
+            remaining -= n * str;
+          }
+        });
+
+        if (remaining > 0.0001) {
+          approximate = true;
+        }
+
+        Object.entries(perDayCounts).forEach(([str, n]) => {
+          const strength = Number(str);
+          totals[strength] = (totals[strength] || 0) + n * 7; // 7 days per week
+        });
+      });
+
+      return { totals, approximate };
+    }
+
+    function buildTabletCountTextForStop(drugId, dose, durationBand) {
+      const drug = getDrugById(drugId);
+      const startDose = Number(dose);
+      if (!drug || !startDose) return "";
+
+      const { weeks } = generateDiscreteTaperWeeks(drug, startDose, durationBand);
+      const { totals, approximate } = accumulateTabletCountsForDrug(drug, weeks);
+
+      const strengthKeys = Object.keys(totals)
+        .map(k => Number(k))
+        .sort((a, b) => b - a);
+
+      if (!strengthKeys.length) {
+        return "Tablet / capsule count helper could not generate quantities for this taper. Please calculate manually.";
+      }
+
+      let text =
+        `Tablet / capsule counts for full planned taper of ${drug.name}:\n` +
+        strengthKeys.map(s => `• ${s} mg: ${totals[s]} tablets/capsules total (over all weeks)`).join("\n") +
+        `\n\nAssumes 7 days per week and dosing exactly as per the weekly plan.`;
+
+      if (approximate) {
+        text += `\n\nNote: Some daily doses could not be matched exactly using available strengths; counts have been rounded down to the nearest achievable total.`;
+      }
+
+      return text;
+    }
+
+    function accumulateTabletCountsForSwitch(fromDrug, toDrug, weekPlan) {
+      const fromWeeks = weekPlan.map(w => ({ week: w.week, dose: w.fromDose || 0 }));
+      const toWeeks = weekPlan.map(w => ({ week: w.week, dose: w.toDose || 0 }));
+
+      const { totals: fromTotals, approximate: fromApprox } = accumulateTabletCountsForDrug(fromDrug, fromWeeks);
+      const { totals: toTotals, approximate: toApprox } = accumulateTabletCountsForDrug(toDrug, toWeeks);
+
+      return {
+        fromTotals: fromTotals,
+        toTotals: toTotals,
+        approximate: fromApprox || toApprox
+      };
+    }
+
+    function buildTabletCountTextForSwitch(from, to, weekPlan) {
+      const { fromTotals, toTotals, approximate } = accumulateTabletCountsForSwitch(from, to, weekPlan);
+
+      const fromKeys = Object.keys(fromTotals).map(Number).sort((a, b) => b - a);
+      const toKeys = Object.keys(toTotals).map(Number).sort((a, b) => b - a);
+
+      if (!fromKeys.length && !toKeys.length) {
+        return "Tablet / capsule count helper could not generate quantities for this switching plan. Please calculate manually.";
+      }
+
+      let text = "";
+
+      if (fromKeys.length) {
+        text +=
+          `Tablets/capsules required for ${from.name} (all weeks in this plan):\n` +
+          fromKeys.map(s => `• ${s} mg: ${fromTotals[s]} tablets/capsules total`).join("\n") +
+          `\n\n`;
+      }
+
+      if (toKeys.length) {
+        text +=
+          `Tablets/capsules required for ${to.name} (all weeks in this plan):\n` +
+          toKeys.map(s => `• ${s} mg: ${toTotals[s]} tablets/capsules total`).join("\n") +
+          `\n\n`;
+      }
+
+      text += `Assumes 7 days per week and dosing exactly as per the weekly plan.`;
+      if (approximate) {
+        text += `\n\nNote: Some daily doses could not be matched exactly using available strengths; counts have been rounded down to the nearest achievable total.`;
+      }
+
+      return text;
+    }
+
+    // ===== Stopping plan – clinician + patient + tablet helper =====
     function generateStopPlan(drugId, dose, durationBand) {
       const drug = getDrugById(drugId);
       const startDose = Number(dose);
       if (!drug || !startDose) {
-        return { clinician: "Please select a drug and dose.", sms: "" };
+        return { clinician: "Please select a drug and dose.", sms: "", tablets: "" };
       }
 
       const { weeks } = generateDiscreteTaperWeeks(drug, startDose, durationBand);
@@ -1123,19 +1280,21 @@
         `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, ` +
         `contact the surgery, NHS 111 or 999/A&E urgently.`;
 
-      return { clinician: clinicianText, sms: smsText };
+      const tabletsText = buildTabletCountTextForStop(drugId, dose, durationBand);
+
+      return { clinician: clinicianText, sms: smsText, tablets: tabletsText };
     }
 
-    // ===== Weekly cross-taper plan for patient SMS (uses taper engine) =====
-    function buildWeeklyCrossTaperPatientText(from, fromDose, to) {
+    // ===== Weekly cross-taper plan for patient SMS + tablet counts =====
+    function buildWeeklyCrossTaperPlan(from, fromDose, to) {
       const startDose = Number(fromDose);
-
-      // Use "medium" as base; escalate to "long" if very high withdrawal risk
       const band = (from.withdrawalRisk === "very_high" || from.withdrawalRisk === "high") ? "long" : "medium";
 
-      const plan = generateDiscreteTaperWeeks(from, startDose, band);
-      const weeks = plan && plan.weeks ? plan.weeks : [];
-      if (!weeks.length) return null;
+      const taper = generateDiscreteTaperWeeks(from, startDose, band);
+      const weeks = taper && taper.weeks ? taper.weeks : [];
+      if (!weeks.length) {
+        return { weekPlan: [], smsText: "" };
+      }
 
       // Determine last week where from-drug dose > 0
       let indexStopFrom = -1;
@@ -1153,7 +1312,6 @@
         let toDose;
 
         if (i === 0) {
-          // First week: introduce new drug at starting dose
           toDose = toStartDose;
         } else {
           if (i <= Math.floor(indexStopFrom / 2)) {
@@ -1170,6 +1328,7 @@
         });
       }
 
+      // Build patient SMS using this weekPlan
       const lines = [];
       for (let i = 0; i < weekPlan.length; i++) {
         const w = weekPlan[i];
@@ -1202,8 +1361,6 @@
         }
       }
 
-      if (!lines.length) return null;
-
       const intro =
         `Your switching plan\n\n` +
         `You are changing from ${from.name} ${startDose} mg each day to ${to.name}.\n\n`;
@@ -1212,17 +1369,19 @@
         `\n\nIf you feel very agitated, confused, feverish, have severe diarrhoea, or have thoughts of harming yourself, ` +
         `contact the surgery, NHS 111 or 999/A&E urgently.`;
 
-      return intro + lines.join("\n") + safety;
+      const smsText = lines.length ? intro + lines.join("\n") + safety : "";
+
+      return { weekPlan, smsText };
     }
 
-    // ===== Switching plan – clinician + patient (uses taper engine for patient) =====
+    // ===== Switching plan – clinician + patient + tablet helper =====
     function generateSwitchPlan(fromDrugId, fromDose, toDrugId) {
       const from = getDrugById(fromDrugId);
       const to = getDrugById(toDrugId);
       const dose = Number(fromDose);
 
       if (!from || !to) {
-        return { clinician: "Please select both a current and a new antidepressant.", sms: "" };
+        return { clinician: "Please select both a current and a new antidepressant.", sms: "", tablets: "" };
       }
 
       const strategy = getSwitchStrategy(from, to, dose);
@@ -1241,7 +1400,10 @@
           `You are changing from ${from.name} to ${to.name}. Because of the type of medicines involved, ` +
           `your GP or specialist will agree a personalised plan with you rather than using an automatic schedule.`;
 
-        return { clinician: clinicianText, sms: smsText };
+        const tabletsText =
+          "Tablet / capsule count helper is not provided for switches involving MAOIs or other specialist-only regimens.";
+
+        return { clinician: clinicianText, sms: smsText, tablets: tabletsText };
       }
 
       const cypCautions = getCypCautions(from, to);
@@ -1309,16 +1471,24 @@
         standardCautions.map(c => `• ${c}`).join("\n") +
         `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies; check detailed SPS tables for this specific pair.`;
 
-      // ---- Patient SMS ----
-      let smsText = null;
+      // ---- Patient SMS + tablet helper ----
+      let smsText = "";
+      let tabletsText = "";
+      let weekPlanForCounts = null;
 
-      // For cross-tapers, generate detailed week-by-week SMS using taper engine
       if (strategy.mode === "cross_taper" || strategy.mode === "cautious_cross_or_taper") {
-        smsText = buildWeeklyCrossTaperPatientText(from, dose, to);
-      }
+        const planObj = buildWeeklyCrossTaperPlan(from, dose, to);
+        smsText = planObj.smsText;
+        weekPlanForCounts = planObj.weekPlan;
 
-      // For other strategies or fallback
-      if (!smsText) {
+        if (weekPlanForCounts && weekPlanForCounts.length) {
+          tabletsText = buildTabletCountTextForSwitch(from, to, weekPlanForCounts);
+        } else {
+          tabletsText =
+            "Tablet / capsule count helper could not generate quantities for this cross-taper. Please check doses and calculate manually.";
+        }
+      } else if (strategy.mode === "direct" || strategy.mode === "taper_stop_start" || strategy.mode === "same_drug") {
+        // Simpler SMS without full week-by-week cross-taper
         smsText =
           `Your medication plan\n\n` +
           `You are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n`;
@@ -1337,9 +1507,20 @@
         smsText +=
           `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, ` +
           `have severe diarrhoea, or have thoughts of harming yourself.`;
+
+        tabletsText =
+          "Tablet / capsule count helper is currently only available for cross-taper style switching plans. For direct or taper–then–start switches, please calculate quantities manually based on the chosen regimen.";
+      } else {
+        smsText =
+          `Your medication plan\n\n` +
+          `You are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n` +
+          `We will agree an individualised plan. Contact the surgery if you have concerns or side effects, and seek urgent help (111/999/A&E) if you feel very unwell or have thoughts of harming yourself.`;
+
+        tabletsText =
+          "Tablet / capsule count helper is not available for this type of switching plan. Please calculate quantities manually.";
       }
 
-      return { clinician: clinicianText, sms: smsText };
+      return { clinician: clinicianText, sms: smsText, tablets: tabletsText };
     }
 
     // ===== Taper pathway chooser (modal) =====
@@ -1394,6 +1575,7 @@
         });
       }
 
+      // Use stopping logic to give example taper in modal
       options.forEach(opt => {
         const examplePlan = generateStopPlan(opt.taperDrugId, opt.taperStartDose, durationBand);
         const lines = examplePlan.clinician
@@ -1490,8 +1672,13 @@
         `Once you are settled on this, we will gradually reduce ${taperDrug.name}:\n\n` +
         taperPlan.sms;
 
+      const tabletsText =
+        `Tablet / capsule count helper applies to the intermediate taper only:\n\n` +
+        taperPlan.tablets;
+
       document.getElementById("stopClinician").textContent = clinicianText;
       document.getElementById("stopSMS").textContent = smsText;
+      document.getElementById("stopTablets").textContent = tabletsText;
 
       closeTaperModal();
     }
@@ -1678,11 +1865,13 @@
         const res = generateSwitchPlan(fromDrugSelect.value, fromDoseSelect.value, toDrugSelect.value);
         document.getElementById("switchClinician").textContent = res.clinician;
         document.getElementById("switchSMS").textContent = res.sms;
+        document.getElementById("switchTablets").textContent = res.tablets;
       });
 
       document.getElementById("clearSwitch").addEventListener("click", () => {
         document.getElementById("switchClinician").textContent = "";
         document.getElementById("switchSMS").textContent = "";
+        document.getElementById("switchTablets").textContent = "";
       });
 
       // Generate stop
@@ -1697,6 +1886,7 @@
         if (!drug || !dose) {
           document.getElementById("stopClinician").textContent = "Please select a drug and dose.";
           document.getElementById("stopSMS").textContent = "";
+          document.getElementById("stopTablets").textContent = "";
           return;
         }
 
@@ -1712,11 +1902,13 @@
         const res = generateStopPlan(drugId, dose, durationBand);
         document.getElementById("stopClinician").textContent = res.clinician;
         document.getElementById("stopSMS").textContent = res.sms;
+        document.getElementById("stopTablets").textContent = res.tablets;
       });
 
       document.getElementById("clearStop").addEventListener("click", () => {
         document.getElementById("stopClinician").textContent = "";
         document.getElementById("stopSMS").textContent = "";
+        document.getElementById("stopTablets").textContent = "";
       });
 
       // Modal buttons
@@ -1744,8 +1936,10 @@
       // Ensure outputs start empty
       document.getElementById("switchClinician").textContent = "";
       document.getElementById("switchSMS").textContent = "";
+      document.getElementById("switchTablets").textContent = "";
       document.getElementById("stopClinician").textContent = "";
       document.getElementById("stopSMS").textContent = "";
+      document.getElementById("stopTablets").textContent = "";
     });
   </script>
 </body>
