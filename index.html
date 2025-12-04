@@ -282,7 +282,7 @@
       withdrawalRisk: "very_high",
       ukLicensed: true,
       requiresSwitchForTaper: false,
-      unitStrengths: [150, 75, 37.5],
+      unitStrengths: [75, 37.5],  // corrected: IR tablets are 37.5 & 75 mg
       recommendedStart: 75,
       geriatricStart: 37.5
     },
@@ -295,7 +295,7 @@
       withdrawalRisk: "very_high",
       ukLicensed: true,
       requiresSwitchForTaper: true,
-      unitStrengths: [150, 75],
+      unitStrengths: [300, 225, 150, 75, 37.5], // corrected: full MR range
       recommendedStart: 75
     },
     {
@@ -316,12 +316,12 @@
       id: "mirtazapine",
       name: "Mirtazapine",
       class: "NaSSA",
-      dailyDoses: [7.5, 15, 22.5, 30, 37.5, 45],
+      dailyDoses: [7.5, 15, 22.5, 30, 37.5, 45], // doses achievable via halves/alternation
       halfLife: "medium",
       withdrawalRisk: "medium",
       ukLicensed: true,
       requiresSwitchForTaper: false,
-      unitStrengths: [45, 30, 15],
+      unitStrengths: [45, 30, 15], // actual tablet strengths
       recommendedStart: 15
     },
     {
@@ -469,7 +469,7 @@
       withdrawalRisk: "high",
       ukLicensed: true,
       requiresSwitchForTaper: false,
-      unitStrengths: [30],
+      unitStrengths: [60, 30, 10], // corrected strengths
       recommendedStart: 30
     },
     {
@@ -494,7 +494,7 @@
       withdrawalRisk: "high",
       ukLicensed: true,
       requiresSwitchForTaper: false,
-      unitStrengths: [50, 25],
+      unitStrengths: [50, 25, 10], // corrected: includes 10 mg
       recommendedStart: 50
     },
 
@@ -624,7 +624,6 @@
       selectEl.appendChild(opt);
     });
 
-    // Meta options at the bottom
     if (includeMetaOption) {
       if (!showAll) {
         const showOpt = document.createElement("option");
@@ -969,7 +968,6 @@
     return steps;
   }
 
-  // === apply taper profiles with tails only for EXTENDED/SLOW ===
   function applyTaperProfileToSteps(steps, profile) {
     if (!steps || !steps.length) return [];
     if (!profile || profile === "standard") return steps;
@@ -1715,7 +1713,6 @@
     const state = loadState();
     showAllAntidepressants = !!state.showAllAntidepressants;
 
-    // Helpers to expand/collapse and repopulate all dropdowns
     function expandAllAntidepressantsAndRepopulate() {
       showAllAntidepressants = true;
       saveState({ showAllAntidepressants: true });
