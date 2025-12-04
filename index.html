@@ -1161,10 +1161,18 @@
       }
 
       // MEDIUM / LONG / VERY_LONG – use full ladder (minus start) then zero
-      const fullNonZeroAsc = nonZeroLevelsDesc.slice().sort((a, b) => a - b);
-      const steps = fullNonZeroAsc.map(d => ({ dose: d, pattern: "daily" }));
-      steps.push({ dose: 0, pattern: "daily" });
-      return steps;
+     // MEDIUM / LONG / VERY_LONG – use full ladder (minus start) then zero
+// Use descending order for tapering: startDose → lower → lower → … → lowest → 0
+const fullNonZeroDesc = nonZeroLevelsDesc.slice().sort((a, b) => b - a);
+
+const steps = fullNonZeroDesc.map(d => ({
+  dose: d,
+  pattern: "daily"
+}));
+
+steps.push({ dose: 0, pattern: "daily" });
+return steps;
+
     }
 
     function applyTaperProfileToSteps(steps, profile) {
@@ -2080,3 +2088,4 @@
   </script>
 </body>
 </html>
+
