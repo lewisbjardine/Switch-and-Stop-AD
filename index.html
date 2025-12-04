@@ -1678,7 +1678,9 @@
 
       if (strategy.mode === "direct") {
         smsText +=
-          `You will stop ${from.name} and start ${to.name} ${chosenToStartDose} mg once daily the next day (your GP may adjust this depending on your age and health).\n\n`;
+         smsText +=
+  `You will stop ${from.name} and start ${to.name} ${chosenToStartDose} mg once daily the next day.\n\n`;
+
       } else if (strategy.mode === "taper_stop_start") {
         smsText +=
           `We will slowly reduce ${from.name}, then have a short gap before starting ${to.name} ${chosenToStartDose} mg once daily.\n\n`;
@@ -2157,3 +2159,4 @@
 </script>
 </body>
 </html>
+
