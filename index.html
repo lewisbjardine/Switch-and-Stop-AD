@@ -640,12 +640,19 @@
 
     // Add in-dropdown "Show all antidepressants…" option when collapsed
     if (!showAll && includeShowAllOption) {
-      const showAllOpt = document.createElement("option");
-      showAllOpt.value = SHOW_ALL_VALUE;
-      showAllOpt.textContent = "Show all antidepressants…";
-      showAllOpt.setAttribute("data-meta-option", "true");
-      selectEl.appendChild(showAllOpt);
-    }
+  const showAllOpt = document.createElement("option");
+  showAllOpt.value = SHOW_ALL_VALUE;
+  showAllOpt.textContent = "Show all antidepressants…";
+  showAllOpt.setAttribute("data-meta-option", "true");
+  selectEl.appendChild(showAllOpt);
+} else if (showAll && includeShowAllOption) {
+  const hideOpt = document.createElement("option");
+  hideOpt.value = "__HIDE__";
+  hideOpt.textContent = "Hide extra antidepressants";
+  hideOpt.setAttribute("data-meta-option", "true");
+  selectEl.appendChild(hideOpt);
+}
+
 
     if (
       preferredValue &&
@@ -1936,3 +1943,4 @@
 </script>
 </body>
 </html>
+
