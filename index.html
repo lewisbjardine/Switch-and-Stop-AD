@@ -832,19 +832,16 @@
     function getCypCautions(from, to) {
       const cautions = [];
 
-      // Fluoxetine – long half-life, CYP2D6
       if (from.id === "fluoxetine") {
         cautions.push("Fluoxetine has a long half-life; interactions and CYP2D6 inhibition may persist for 5–6 weeks after stopping.");
       }
 
-      // Paroxetine – strong CYP2D6 inhibitor
       if (from.id === "paroxetine") {
         if (["duloxetine", "venlafaxine_ir", "venlafaxine_mr", "trazodone"].includes(to.id) || to.class === "TCA") {
           cautions.push("Paroxetine is a potent CYP2D6 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
         }
       }
 
-      // Fluvoxamine – CYP1A2
       if (from.id === "fluvoxamine") {
         if (["duloxetine", "agomelatine", "mirtazapine"].includes(to.id)) {
           cautions.push("Fluvoxamine is a potent CYP1A2 inhibitor; may increase levels of " + to.name + ". Start at low dose and monitor closely.");
@@ -855,8 +852,7 @@
     }
 
     function getPairwiseException(from, to) {
-      // Example explicit pairwise rules; easy to extend
-      // Fluoxetine -> Venlafaxine
+      // Fluoxetine -> venlafaxine
       if (from.id === "fluoxetine" && (to.id === "venlafaxine_ir" || to.id === "venlafaxine_mr")) {
         return {
           mode: "taper_stop_start",
@@ -865,7 +861,7 @@
         };
       }
 
-      // Any -> MAOI or MAOI -> any: specialist only
+      // Any -> MAOI or MAOI -> any
       if (to.class === "MAOI" || from.class === "MAOI") {
         return {
           mode: "unsupported",
@@ -906,7 +902,6 @@
       const fromClass = from.class;
       const toClass = to.class;
 
-      // Fluoxetine – long half-life generic rule
       if (from.id === "fluoxetine") {
         return {
           mode: "taper_stop_start",
@@ -977,121 +972,11 @@
         };
       }
 
-      // Default cautious approach
       return {
         mode: "cross_taper",
         durationWeeks: 2,
         notes: "Use a cautious cross-taper over ~2–4 weeks and consult SPS switching tables for this specific pair if unsure."
       };
-    }
-
-    function generateSwitchPlan(fromDrugId, fromDose, toDrugId) {
-      const from = getDrugById(fromDrugId);
-      const to = getDrugById(toDrugId);
-      const dose = Number(fromDose);
-
-      if (!from || !to) {
-        return { clinician: "Please select both a current and a new antidepressant.", sms: "" };
-      }
-
-      const strategy = getSwitchStrategy(from, to, dose);
-
-      if (strategy.mode === "unsupported") {
-        const clinicianText =
-          `Switch from ${from.name} ${dose} mg/day to ${to.name}\n\n` +
-          `Automated plan not provided.\n` +
-          `• ${strategy.reason}\n` +
-          `• Refer to SPS MAOI / specialist switching guidance and local Trust or ICB protocols.\n` +
-          `• Consider discussion with psychiatry / mental health pharmacist.\n`;
-
-        const smsText =
-          `Your medication plan\n\n` +
-          `You are changing from ${from.name} to ${to.name}. Because of the type of medicines involved, ` +
-          `your GP or specialist will agree a personalised plan with you rather than using an automatic schedule.`;
-
-        return { clinician: clinicianText, sms: smsText };
-      }
-
-      const cypCautions = getCypCautions(from, to);
-      const scheduleLines = [];
-      const doseTextFrom = `${from.name} ${dose} mg once daily`;
-
-      switch (strategy.mode) {
-        case "direct":
-          scheduleLines.push(
-            `Stop ${doseTextFrom}, and start ${to.name} at usual starting dose (e.g. ${to.dailyDoses[0]} mg once daily) the following day.`
-          );
-          break;
-
-        case "cross_taper":
-          const doses = from.dailyDoses.filter(d => d <= dose).sort((a, b) => b - a);
-          const nextLower = doses[1] || Math.max(dose / 2, doses[doses.length - 1] || dose / 2);
-          scheduleLines.push(
-            `Week 1–2: Reduce ${from.name} from ${dose} mg/day to ~${nextLower} mg/day and start ${to.name} at a low dose (e.g. ${to.dailyDoses[0]} mg once daily).`,
-            `Week 3–4: Stop ${from.name}. Increase ${to.name} towards target dose as tolerated.`
-          );
-          break;
-
-        case "cautious_cross_or_taper":
-          scheduleLines.push(
-            `Option 1 – taper then start: reduce ${from.name} gradually over ~2–4 weeks and stop, then start low-dose ${to.name} the following day.`,
-            `Option 2 – cautious cross-taper over ~2–4 weeks where interaction risk is low and close monitoring is possible.`
-          );
-          break;
-
-        case "taper_stop_start":
-          scheduleLines.push(
-            `Weeks 1–2: Gradually reduce ${from.name} (e.g. reduce to ~50% of current dose, then if fluoxetine consider 20 mg daily).`,
-            `Then stop ${from.name} and wait ${strategy.washoutDays || 0}–${(strategy.washoutDays || 0) + 3} days.`,
-            `Start ${to.name} at low dose (e.g. ${to.dailyDoses[0]} mg once daily) and titrate according to response.`
-          );
-          break;
-
-        case "same_drug":
-          scheduleLines.push(`This is a dose adjustment of ${from.name} rather than a switch. Consider gradual titration and regular review.`);
-          break;
-
-        default:
-          scheduleLines.push("Use a cautious cross-taper over 2–4 weeks, guided by SPS and local guidance.");
-      }
-
-      const standardCautions = [
-        "Warned about possible transient increase in anxiety, GI upset, sleep disturbance and withdrawal symptoms during the switch.",
-        "Advised on risk of serotonin syndrome, particularly when drugs overlap.",
-        "Advised to seek urgent help (111/999/A&E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
-        "Plan for review within 2–4 weeks, sooner if high risk."
-      ];
-
-      const clinicianText =
-        `Plan – switch from ${from.name} ${dose} mg/day to ${to.name}\n\n` +
-        scheduleLines.map(l => `• ${l}`).join("\n") +
-        `\n\nRationale & cautions:\n` +
-        `• ${strategy.notes}\n` +
-        (cypCautions.length ? cypCautions.map(c => `• ${c}`).join("\n") + "\n" : "") +
-        standardCautions.map(c => `• ${c}`).join("\n") +
-        `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies; check detailed SPS tables for this specific pair.`;
-
-      let smsText = `Your medication plan\n\nYou are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n`;
-
-      if (strategy.mode === "direct") {
-        smsText +=
-          `You will stop ${from.name} and start ${to.name} at the usual starting dose the next day (your GP will confirm the exact dose).\n\n`;
-      } else if (strategy.mode === "cross_taper" || strategy.mode === "cautious_cross_or_taper") {
-        smsText +=
-          `We will gradually reduce ${from.name} while starting ${to.name} at a low dose over a few weeks.\n\n`;
-      } else if (strategy.mode === "taper_stop_start") {
-        smsText +=
-          `We will slowly reduce ${from.name}, then have a short gap before starting ${to.name} at a low dose.\n\n`;
-      } else if (strategy.mode === "same_drug") {
-        smsText +=
-          `We are adjusting the dose of ${from.name} gradually rather than changing to a new medicine.\n\n`;
-      }
-
-      smsText +=
-        `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, ` +
-        `have severe diarrhoea, or have thoughts of harming yourself.`;
-
-      return { clinician: clinicianText, sms: smsText };
     }
 
     // ===== Stopping logic – discrete BNF doses, week-by-week =====
@@ -1159,7 +1044,7 @@
       return { weeks, weeksPerStep };
     }
 
-    // Patient wording for doses (C: clinician mg + patient tablet-ish)
+    // Patient wording for taper doses
     const venlafaxineIrRegimens = {
       "37.5": "Take 37.5 mg once daily.",
       "75": "Take 37.5 mg twice daily.",
@@ -1183,7 +1068,6 @@
         return venlafaxineIrRegimens[key];
       }
 
-      // Default: simple mg once daily
       return `Take ${dose} mg of ${drug.name} once daily.`;
     }
 
@@ -1223,7 +1107,7 @@
         `• Advised to contact the surgery if withdrawal is severe/persistent or if depressive symptoms return; consider pausing or slowing taper.\n` +
         `• Documented crisis/safety netting (self-harm, suicidal ideation) and agreed review plan.\n`;
 
-      // Patient SMS – week by week, tablet-friendly where possible
+      // Patient SMS – week by week
       const smsLines = weeks.map(w => {
         if (w.dose === 0) {
           return `Week ${w.week}: Do not take ${drug.name}.`;
@@ -1235,9 +1119,225 @@
       const smsText =
         `Plan to reduce ${drug.name}\n\n` +
         `You are on ${drug.name} ${startDose} mg each day. We will reduce this gradually, week by week:\n\n` +
-        smsLines.map(l => l).join("\n") +
+        smsLines.join("\n") +
         `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, ` +
         `contact the surgery, NHS 111 or 999/A&E urgently.`;
+
+      return { clinician: clinicianText, sms: smsText };
+    }
+
+    // ===== Weekly cross-taper plan for patient SMS (uses taper engine) =====
+    function buildWeeklyCrossTaperPatientText(from, fromDose, to) {
+      const startDose = Number(fromDose);
+
+      // Use "medium" as base; escalate to "long" if very high withdrawal risk
+      const band = (from.withdrawalRisk === "very_high" || from.withdrawalRisk === "high") ? "long" : "medium";
+
+      const plan = generateDiscreteTaperWeeks(from, startDose, band);
+      const weeks = plan && plan.weeks ? plan.weeks : [];
+      if (!weeks.length) return null;
+
+      // Determine last week where from-drug dose > 0
+      let indexStopFrom = -1;
+      for (let i = 0; i < weeks.length; i++) {
+        if (weeks[i].dose > 0) indexStopFrom = i;
+      }
+
+      const toStartDose = to.dailyDoses[0];
+      const toTargetDose =
+        to.dailyDoses[Math.min(1, to.dailyDoses.length - 1)] || toStartDose;
+
+      const weekPlan = [];
+      for (let i = 0; i < weeks.length; i++) {
+        const w = weeks[i];
+        let toDose;
+
+        if (i === 0) {
+          // First week: introduce new drug at starting dose
+          toDose = toStartDose;
+        } else {
+          if (i <= Math.floor(indexStopFrom / 2)) {
+            toDose = toStartDose;
+          } else {
+            toDose = toTargetDose;
+          }
+        }
+
+        weekPlan.push({
+          week: w.week,
+          fromDose: w.dose,
+          toDose
+        });
+      }
+
+      const lines = [];
+      for (let i = 0; i < weekPlan.length; i++) {
+        const w = weekPlan[i];
+        const prev = i > 0 ? weekPlan[i - 1] : null;
+
+        const parts = [];
+
+        // From-drug text
+        if (w.fromDose > 0) {
+          parts.push(describeDoseForPatient(from, w.fromDose));
+        } else if (prev && prev.fromDose > 0) {
+          parts.push(`Stop ${from.name}.`);
+        }
+
+        // To-drug text
+        if (w.toDose > 0) {
+          let action;
+          if (!prev || (prev && !prev.toDose)) {
+            action = "Start";
+          } else if (prev.toDose && w.toDose > prev.toDose) {
+            action = "Increase";
+          } else {
+            action = "Continue";
+          }
+          parts.push(`${action} ${to.name} ${w.toDose} mg once daily.`);
+        }
+
+        if (parts.length) {
+          lines.push(`Week ${w.week}: ${parts.join(" ")}`);
+        }
+      }
+
+      if (!lines.length) return null;
+
+      const intro =
+        `Your switching plan\n\n` +
+        `You are changing from ${from.name} ${startDose} mg each day to ${to.name}.\n\n`;
+
+      const safety =
+        `\n\nIf you feel very agitated, confused, feverish, have severe diarrhoea, or have thoughts of harming yourself, ` +
+        `contact the surgery, NHS 111 or 999/A&E urgently.`;
+
+      return intro + lines.join("\n") + safety;
+    }
+
+    // ===== Switching plan – clinician + patient (uses taper engine for patient) =====
+    function generateSwitchPlan(fromDrugId, fromDose, toDrugId) {
+      const from = getDrugById(fromDrugId);
+      const to = getDrugById(toDrugId);
+      const dose = Number(fromDose);
+
+      if (!from || !to) {
+        return { clinician: "Please select both a current and a new antidepressant.", sms: "" };
+      }
+
+      const strategy = getSwitchStrategy(from, to, dose);
+
+      // Unsupported / specialist cases
+      if (strategy.mode === "unsupported") {
+        const clinicianText =
+          `Switch from ${from.name} ${dose} mg/day to ${to.name}\n\n` +
+          `Automated plan not provided.\n` +
+          `• ${strategy.reason}\n` +
+          `• Refer to SPS MAOI / specialist switching guidance and local Trust or ICB protocols.\n` +
+          `• Consider discussion with psychiatry / mental health pharmacist.\n`;
+
+        const smsText =
+          `Your medication plan\n\n` +
+          `You are changing from ${from.name} to ${to.name}. Because of the type of medicines involved, ` +
+          `your GP or specialist will agree a personalised plan with you rather than using an automatic schedule.`;
+
+        return { clinician: clinicianText, sms: smsText };
+      }
+
+      const cypCautions = getCypCautions(from, to);
+      const scheduleLines = [];
+      const doseTextFrom = `${from.name} ${dose} mg once daily`;
+
+      // High-level schedule for clinicians (summary)
+      switch (strategy.mode) {
+        case "direct":
+          scheduleLines.push(
+            `Stop ${doseTextFrom}, and start ${to.name} at usual starting dose (e.g. ${to.dailyDoses[0]} mg once daily) the following day.`
+          );
+          break;
+
+        case "cross_taper": {
+          const doses = from.dailyDoses.filter(d => d <= dose).sort((a, b) => b - a);
+          const nextLower = doses[1] || Math.max(dose / 2, doses[doses.length - 1] || dose / 2);
+          scheduleLines.push(
+            `Week 1–2: Reduce ${from.name} from ${dose} mg/day to ~${nextLower} mg/day and start ${to.name} at a low dose (e.g. ${to.dailyDoses[0]} mg once daily).`,
+            `Week 3–4: Stop ${from.name}. Increase ${to.name} towards target dose as tolerated.`
+          );
+          break;
+        }
+
+        case "cautious_cross_or_taper":
+          scheduleLines.push(
+            `Option 1 – taper then start: reduce ${from.name} gradually over ~2–4 weeks and stop, then start low-dose ${to.name} the following day.`,
+            `Option 2 – cautious cross-taper over ~2–4 weeks where interaction risk is low and close monitoring is possible.`
+          );
+          break;
+
+        case "taper_stop_start":
+          scheduleLines.push(
+            `Weeks 1–2: Gradually reduce ${from.name} (e.g. reduce to ~50% of current dose, then if fluoxetine consider 20 mg daily).`,
+            `Then stop ${from.name} and wait ${strategy.washoutDays || 0}–${(strategy.washoutDays || 0) + 3} days.`,
+            `Start ${to.name} at low dose (e.g. ${to.dailyDoses[0]} mg once daily) and titrate according to response.`
+          );
+          break;
+
+        case "same_drug":
+          scheduleLines.push(
+            `This is a dose adjustment of ${from.name} rather than a switch. Consider gradual titration and regular review.`
+          );
+          break;
+
+        default:
+          scheduleLines.push(
+            "Use a cautious cross-taper over 2–4 weeks, guided by SPS and local guidance."
+          );
+      }
+
+      const standardCautions = [
+        "Warned about possible transient increase in anxiety, GI upset, sleep disturbance and withdrawal symptoms during the switch.",
+        "Advised on risk of serotonin syndrome, particularly when drugs overlap.",
+        "Advised to seek urgent help (111/999/A&E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
+        "Plan for review within 2–4 weeks, sooner if high risk."
+      ];
+
+      const clinicianText =
+        `Plan – switch from ${from.name} ${dose} mg/day to ${to.name}\n\n` +
+        scheduleLines.map(l => `• ${l}`).join("\n") +
+        `\n\nRationale & cautions:\n` +
+        `• ${strategy.notes}\n` +
+        (cypCautions.length ? cypCautions.map(c => `• ${c}`).join("\n") + "\n" : "") +
+        standardCautions.map(c => `• ${c}`).join("\n") +
+        `\n\nBased on high-level principles from NICE NG222 and SPS switching strategies; check detailed SPS tables for this specific pair.`;
+
+      // ---- Patient SMS ----
+      let smsText = null;
+
+      // For cross-tapers, generate detailed week-by-week SMS using taper engine
+      if (strategy.mode === "cross_taper" || strategy.mode === "cautious_cross_or_taper") {
+        smsText = buildWeeklyCrossTaperPatientText(from, dose, to);
+      }
+
+      // For other strategies or fallback
+      if (!smsText) {
+        smsText =
+          `Your medication plan\n\n` +
+          `You are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n`;
+
+        if (strategy.mode === "direct") {
+          smsText +=
+            `You will stop ${from.name} and start ${to.name} at the usual starting dose the next day (your GP will confirm the exact dose).\n\n`;
+        } else if (strategy.mode === "taper_stop_start") {
+          smsText +=
+            `We will slowly reduce ${from.name}, then have a short gap before starting ${to.name} at a low dose.\n\n`;
+        } else if (strategy.mode === "same_drug") {
+          smsText +=
+            `We are adjusting the dose of ${from.name} gradually rather than changing to a new medicine.\n\n`;
+        }
+
+        smsText +=
+          `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, ` +
+          `have severe diarrhoea, or have thoughts of harming yourself.`;
+      }
 
       return { clinician: clinicianText, sms: smsText };
     }
