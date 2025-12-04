@@ -13,17 +13,7 @@
 </header>
 
 <main>
-  <!-- Global toggle for common vs all antidepressants -->
-  <div style="text-align:right; margin-bottom:0.5rem;">
-    <button
-      id="toggleAntidepressantList"
-      type="button"
-      style="background:none;border:none;color:#005eb8;padding:0;font-size:0.85rem;text-decoration:underline;cursor:pointer;"
-    >
-      Show all antidepressants ▼
-    </button>
-  </div>
-
+  <!-- Tabs -->
   <div class="tabs">
     <button class="tab-button active" data-tab="switching">Switching</button>
     <button class="tab-button" data-tab="stopping">Stopping / cessation</button>
@@ -212,6 +202,8 @@
   let selectedTaperOptionId = null;
   let lastFocusedElementBeforeModal = null;
   let showAllAntidepressants = false; // collapsed by default
+
+  const SHOW_ALL_VALUE = "__SHOW_ALL__";
 
   // ========= Antidepressant dataset =========
   const antidepressants = [
@@ -625,7 +617,7 @@
   }
 
   // Populate drug lists with collapsed/expanded behaviour
-  function populateDrugSelect(selectEl, showAll, preferredValue) {
+  function populateDrugSelect(selectEl, showAll, preferredValue, includeShowAllOption) {
     selectEl.innerHTML = "";
     const baseList = showAll
       ? sortedAntidepressants
@@ -646,7 +638,20 @@
       selectEl.appendChild(opt);
     });
 
-    if (preferredValue && [...selectEl.options].some(o => o.value === preferredValue)) {
+    // Add in-dropdown "Show all antidepressants…" option when collapsed
+    if (!showAll && includeShowAllOption) {
+      const showAllOpt = document.createElement("option");
+      showAllOpt.value = SHOW_ALL_VALUE;
+      showAllOpt.textContent = "Show all antidepressants…";
+      showAllOpt.setAttribute("data-meta-option", "true");
+      selectEl.appendChild(showAllOpt);
+    }
+
+    if (
+      preferredValue &&
+      preferredValue !== SHOW_ALL_VALUE &&
+      [...selectEl.options].some(o => o.value === preferredValue)
+    ) {
       selectEl.value = preferredValue;
     } else if (selectEl.options.length) {
       selectEl.selectedIndex = 0;
@@ -1225,7 +1230,7 @@
       `You are on ${drug.name} ${startDose} mg each day. We will reduce this gradually, week by week:\n\n` +
       smsLines.join("\n") +
       `\n\nIf you get severe dizziness, strange "electric shock" feelings, very low mood or thoughts of harming yourself, ` +
-      `contact the surgery, NHS 111 or 999/A&E urgently.`;
+      `contact the surgery, NHS 111 or 999/A&amp;E urgently.`;
 
     const tabletsText = buildTabletCountTextForStop(drugId, dose, durationBand, profile);
 
@@ -1286,7 +1291,7 @@
 
     const safety =
       `\n\nIf you feel very agitated, confused, feverish, have severe diarrhoea, or have thoughts of harming yourself, ` +
-      `contact the surgery, NHS 111 or 999/A&E urgently.`;
+      `contact the surgery, NHS 111 or 999/A&amp;E urgently.`;
 
     const smsText = lines.length ? intro + lines.join("\n") + safety : "";
 
@@ -1377,7 +1382,7 @@
     const standardCautions = [
       "Warned about possible transient increase in anxiety, GI upset, sleep disturbance and withdrawal symptoms during the switch.",
       "Advised on risk of serotonin syndrome, particularly when drugs overlap.",
-      "Advised to seek urgent help (111/999/A&E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
+      "Advised to seek urgent help (111/999/A&amp;E) if severe agitation, confusion, fever, sweating, tremor, diarrhoea or thoughts of self-harm occur.",
       "Plan for review within 2–4 weeks, sooner if high risk."
     ];
 
@@ -1422,7 +1427,7 @@
       }
 
       smsText +=
-        `Contact the surgery, NHS 111 or 999/A&E urgently if you feel very agitated, confused, feverish, ` +
+        `Contact the surgery, NHS 111 or 999/A&amp;E urgently if you feel very agitated, confused, feverish, ` +
         `have severe diarrhoea, or have thoughts of harming yourself.`;
 
       tabletsText =
@@ -1431,7 +1436,7 @@
       smsText =
         `Your medication plan\n\n` +
         `You are changing from ${from.name} ${dose} mg each day to ${to.name}.\n\n` +
-        `We will agree an individualised plan. Contact the surgery if you have concerns or side effects, and seek urgent help (111/999/A&E) if you feel very unwell or have thoughts of harming yourself.`;
+        `We will agree an individualised plan. Contact the surgery if you have concerns or side effects, and seek urgent help (111/999/A&amp;E) if you feel very unwell or have thoughts of harming yourself.`;
 
       tabletsText =
         "Tablet / capsule count helper is not available for this type of switching plan. Please calculate quantities manually.";
@@ -1715,20 +1720,47 @@
     const state = loadState();
     showAllAntidepressants = !!state.showAllAntidepressants;
 
-    // Toggle label function
-    const toggleBtn = document.getElementById("toggleAntidepressantList");
-    function updateToggleLabel() {
-      if (!toggleBtn) return;
-      toggleBtn.textContent = showAllAntidepressants
-        ? "Hide uncommon antidepressants ▲"
-        : "Show all antidepressants ▼";
+    // Helper: once expanded, repopulate all three selects
+    function expandAllAntidepressantsAndRepopulate() {
+      showAllAntidepressants = true;
+      saveState({ showAllAntidepressants: true });
+
+      const prevFrom = fromDrugSelect.value === SHOW_ALL_VALUE ? null : fromDrugSelect.value;
+      const prevTo = toDrugSelect.value === SHOW_ALL_VALUE ? null : toDrugSelect.value;
+      const prevStop = stopDrugSelect.value === SHOW_ALL_VALUE ? null : stopDrugSelect.value;
+
+      populateDrugSelect(fromDrugSelect, true, prevFrom, false);
+      populateDrugSelect(toDrugSelect, true, prevTo, false);
+      populateDrugSelect(stopDrugSelect, true, prevStop, false);
+
+      const prevFromDose = fromDoseSelect.value;
+      const prevToDose = toDrugDoseSelect.value;
+      const prevStopDose = stopDoseSelect.value;
+
+      populateDoseSelect(fromDrugSelect.value, fromDoseSelect, prevFromDose);
+      populateToDrugDose(toDrugSelect.value, toDrugDoseSelect, prevToDose);
+      populateDoseSelect(stopDrugSelect.value, stopDoseSelect, prevStopDose);
     }
-    updateToggleLabel();
 
     // Initial population of selects
-    populateDrugSelect(fromDrugSelect, showAllAntidepressants, state.fromDrug && getDrugById(state.fromDrug) ? state.fromDrug : null);
-    populateDrugSelect(toDrugSelect, showAllAntidepressants, state.toDrug && getDrugById(state.toDrug) ? state.toDrug : null);
-    populateDrugSelect(stopDrugSelect, showAllAntidepressants, state.stopDrug && getDrugById(state.stopDrug) ? state.stopDrug : null);
+    populateDrugSelect(
+      fromDrugSelect,
+      showAllAntidepressants,
+      state.fromDrug && getDrugById(state.fromDrug) ? state.fromDrug : null,
+      true
+    );
+    populateDrugSelect(
+      toDrugSelect,
+      showAllAntidepressants,
+      state.toDrug && getDrugById(state.toDrug) ? state.toDrug : null,
+      true
+    );
+    populateDrugSelect(
+      stopDrugSelect,
+      showAllAntidepressants,
+      state.stopDrug && getDrugById(state.stopDrug) ? state.stopDrug : null,
+      true
+    );
 
     populateDoseSelect(fromDrugSelect.value, fromDoseSelect, state.fromDose);
     populateToDrugDose(toDrugSelect.value, toDrugDoseSelect, state.toDrugDose);
@@ -1776,29 +1808,11 @@
       });
     });
 
-    // Toggle showAll / collapsed lists
-    if (toggleBtn) {
-      toggleBtn.addEventListener("click", () => {
-        showAllAntidepressants = !showAllAntidepressants;
-        updateToggleLabel();
-
-        const currentFrom = fromDrugSelect.value;
-        const currentTo = toDrugSelect.value;
-        const currentStop = stopDrugSelect.value;
-
-        populateDrugSelect(fromDrugSelect, showAllAntidepressants, currentFrom);
-        populateDrugSelect(toDrugSelect, showAllAntidepressants, currentTo);
-        populateDrugSelect(stopDrugSelect, showAllAntidepressants, currentStop);
-
-        populateDoseSelect(fromDrugSelect.value, fromDoseSelect, state.fromDose);
-        populateToDrugDose(toDrugSelect.value, toDrugDoseSelect, state.toDrugDose);
-        populateDoseSelect(stopDrugSelect.value, stopDoseSelect, state.stopDose);
-
-        saveState({ showAllAntidepressants });
-      });
-    }
-
     fromDrugSelect.addEventListener("change", () => {
+      if (fromDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
       populateDoseSelect(fromDrugSelect.value, fromDoseSelect);
       saveState({ fromDrug: fromDrugSelect.value, fromDose: fromDoseSelect.value });
     });
@@ -1808,6 +1822,10 @@
     });
 
     toDrugSelect.addEventListener("change", () => {
+      if (toDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
       populateToDrugDose(toDrugSelect.value, toDrugDoseSelect);
       saveState({ toDrug: toDrugSelect.value, toDrugDose: toDrugDoseSelect.value });
     });
@@ -1817,6 +1835,10 @@
     });
 
     stopDrugSelect.addEventListener("change", () => {
+      if (stopDrugSelect.value === SHOW_ALL_VALUE) {
+        expandAllAntidepressantsAndRepopulate();
+        return;
+      }
       populateDoseSelect(stopDrugSelect.value, stopDoseSelect);
       saveState({ stopDrug: stopDrugSelect.value, stopDose: stopDoseSelect.value });
     });
